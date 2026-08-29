@@ -1,7 +1,7 @@
 Flask
 pdfkit>=1.0.0
 PyMuPDF>=1.22.0
-PyPDF2
+PyPDF
 python-docx
 torch>=2.0.0
 transformers>=4.30.0
