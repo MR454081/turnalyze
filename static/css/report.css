@@ -1,0 +1,2173 @@
+/* =========================================================
+   TURNALYZE REPORT
+   CLEAN / CONSOLIDATED CSS
+   Letter browser layout + PDF layout
+========================================================= */
+
+
+/* =========================================================
+   GLOBAL RESET
+========================================================= */
+html {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+
+    background: #e9ecef;
+
+    font-family: Arial, Helvetica, sans-serif;
+    color: #222;
+
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   DOWNLOAD BAR
+========================================================= */
+
+.report-download-bar {
+    width: 215.9mm;
+    margin: 0 auto 16px auto;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.report-download-button {
+    display: inline-block;
+    padding: 10px 16px;
+    background: #0d6efd;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.report-download-button:hover {
+    background: #0b5ed7;
+}
+
+
+/* =========================================================
+   COMMON LETTER PAGE
+========================================================= */
+
+.page {
+    position: relative;
+
+    width: 215.9mm;
+    height: 279.4mm;
+    min-height: 279.4mm;
+
+    margin: 0 auto 20px auto;
+    padding: 0;
+
+    background: #ffffff;
+
+    border: 1px solid #d8d8d8;
+
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+    overflow: hidden;
+
+    page-break-after: always;
+    break-after: page;
+}
+
+.page {
+    box-sizing: border-box !important;
+    page-break-after: always !important;
+    break-after: page !important;
+}
+/* =========================================================
+   PAGE BREAK
+   The .page itself already creates a page break.
+   This element is kept only for HTML compatibility.
+========================================================= */
+
+.page-break {
+    display: none;
+}
+
+
+/* =========================================================
+   =========================================================
+   PAGE 1 — COVER PAGE
+   =========================================================
+========================================================= */
+
+.cover-page {
+    position: relative;
+
+    width: 215.9mm;
+    height: 279.4mm;
+    min-height: 279.4mm;
+
+    margin: 0 auto 20px auto;
+    padding: 0;
+
+    background: #ffffff;
+
+    border: 1px solid #d8d8d8;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   COVER HEADER
+========================================================= */
+
+.cover-header {
+    position: absolute;
+
+    top: 18px;
+    left: 45px;
+    right: 45px;
+
+    height: 55px;
+
+    display: flex;
+    align-items: center;
+
+    margin: 0;
+    padding: 0;
+
+    z-index: 10;
+}
+
+
+/* Logo area */
+
+.cover-logo-area {
+    width: 75px;
+    min-width: 75px;
+    max-width: 75px;
+
+    flex: 0 0 75px;
+
+    display: flex;
+    align-items: center;
+}
+
+
+/* Logo */
+
+.cover-logo {
+    width: 55px;
+    max-width: 55px;
+    height: auto;
+
+    display: block;
+}
+
+
+/* Page information */
+
+.cover-page-info {
+    margin-left: 8px;
+
+    flex: 0 0 auto;
+
+    font-size: 7px;
+    line-height: 1;
+
+    color: #555;
+
+    white-space: nowrap;
+}
+
+
+/* Submission ID */
+
+.cover-submission-id {
+    margin-left: auto;
+
+    flex: 0 0 auto;
+
+    font-size: 7px;
+    line-height: 1;
+
+    color: #555;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   COVER CONTENT
+========================================================= */
+
+.cover-content {
+    position: absolute;
+
+    top: 430px;
+    left: 45px;
+    right: 45px;
+
+    width: auto;
+
+    margin: 0;
+    padding: 0;
+}
+
+.page .footer {
+    bottom: 28px !important;
+}
+/* =========================================================
+   COVER TITLE
+========================================================= */
+
+.cover-file-title {
+    margin: 0 0 12px 0;
+    padding: 0;
+
+    font-size: 26px;
+    font-weight: 700;
+
+    line-height: 1.25;
+
+    color: #222;
+
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+.cover-document-title {
+    margin: 0 0 16px 0;
+    padding: 0;
+
+    font-size: 16px;
+    font-weight: 600;
+
+    line-height: 1.3;
+
+    color: #555;
+
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   COVER META
+========================================================= */
+
+.cover-meta {
+    margin: 0 0 20px 0;
+    padding: 0;
+}
+
+.cover-meta-item {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    margin: 0 0 10px 0;
+    padding: 0;
+
+    font-size: 12px;
+    line-height: 1.3;
+
+    color: #666;
+}
+
+.cover-meta-item:last-child {
+    margin-bottom: 0;
+}
+
+
+.cover-small-icon {
+    width: 16px;
+    height: 16px;
+
+    object-fit: contain;
+
+    opacity: 0.7;
+
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   COVER DIVIDER
+========================================================= */
+
+.cover-divider {
+    border: none;
+    border-top: 1px solid #d9d9d9;
+
+    margin: 20px 0 24px 0;
+    padding: 0;
+}
+
+
+/* =========================================================
+   COVER DETAILS WRAPPER
+========================================================= */
+
+.cover-details-wrapper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+
+    gap: 55px;
+
+    width: 100%;
+
+    margin: 0;
+    padding: 0;
+}
+
+
+/* =========================================================
+   COVER LEFT DETAILS
+========================================================= */
+
+.cover-details {
+    width: 420px;
+    min-width: 420px;
+
+    flex: 0 0 420px;
+
+    margin: 0;
+    padding: 0;
+}
+
+
+.cover-details-title {
+    margin: 0 0 22px 0;
+    padding: 0;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #222;
+}
+
+
+/* =========================================================
+   COVER DETAIL BLOCK
+========================================================= */
+
+.cover-detail-block {
+    margin: 0 0 17px 0;
+    padding: 0;
+}
+
+.cover-detail-block:last-child {
+    margin-bottom: 0;
+}
+
+
+.cover-label {
+    display: block;
+
+    margin: 0 0 5px 0;
+    padding: 0;
+
+    font-size: 9px;
+    font-weight: 400;
+
+    line-height: 1.2;
+
+    color: #777;
+}
+
+
+.cover-value {
+    display: block;
+
+    margin: 0;
+    padding: 0;
+
+    max-width: 340px;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    line-height: 1.45;
+
+    color: #222;
+
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   COVER STATISTICS
+========================================================= */
+
+.cover-stats {
+    width: 140px;
+    min-width: 140px;
+
+    height: 115px;
+
+    margin: -4px 0 0 0;
+    padding: 14px 14px;
+
+    background: #f5f5f5;
+
+    border: none;
+    border-radius: 0;
+
+    box-sizing: border-box;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   COVER STAT ITEM
+========================================================= */
+
+.cover-stat-item {
+    display: flex;
+    align-items: baseline;
+
+    flex-wrap: nowrap;
+
+    white-space: nowrap;
+
+    margin: 0 0 11px 0;
+    padding: 0;
+
+    line-height: 1;
+}
+
+.cover-stat-item:last-child {
+    margin-bottom: 0;
+}
+
+
+.cover-stat-number {
+    flex: 0 0 auto;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    line-height: 1;
+
+    color: #222;
+}
+
+
+.cover-stat-label {
+    flex: 0 0 auto;
+
+    margin-left: 7px;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    line-height: 1;
+
+    color: #222;
+}
+
+
+/* =========================================================
+   COVER FOOTER
+========================================================= */
+
+.cover-footer {
+    position: absolute;
+
+    left: 45px;
+    right: 45px;
+
+    bottom: 28px;
+
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+
+    margin: 0;
+    padding: 12px 0 0 0;
+
+    border-top: 1px solid #dddddd;
+
+    font-size: 10px;
+
+    color: #666;
+
+    z-index: 20;
+}
+
+
+.cover-footer-left {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+}
+
+
+.cover-footer-logo {
+    width: 80px;
+    height: auto;
+
+    display: block;
+}
+
+
+.cover-footer-page {
+    font-size: 10px;
+    color: #666;
+}
+
+
+.cover-footer-id {
+    margin-left: auto;
+
+    font-size: 10px;
+    color: #666;
+}
+
+
+/* =========================================================
+   =========================================================
+   PAGE 2 — AI WRITING OVERVIEW
+   =========================================================
+========================================================= */
+
+.overview-page {
+    position: relative;
+
+    width: 215.9mm;
+    height: 279.4mm;
+    min-height: 279.4mm;
+
+    margin: 0 auto 20px auto;
+
+    padding: 0 45px 70px 45px;
+
+    background: #ffffff;
+
+    border: 1px solid #d8d8d8;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   PAGE 2 HEADER
+========================================================= */
+
+.overview-page .header {
+    position: relative;
+
+    top: auto;
+    left: auto;
+    right: auto;
+
+    width: 100%;
+
+    height: 55px;
+    min-height: 55px;
+
+    display: flex;
+    align-items: center;
+
+    margin: 0;
+    padding: 0;
+
+    border-bottom: 1px solid #e5e5e5;
+}
+
+
+/* Logo area */
+
+.overview-page .logo-area {
+    width: 75px;
+    min-width: 75px;
+    max-width: 75px;
+
+    flex: 0 0 75px;
+
+    display: flex;
+    align-items: center;
+}
+
+
+/* Logo */
+
+.overview-page .logo {
+    width: 55px;
+    max-width: 55px;
+    height: auto;
+
+    display: block;
+}
+
+
+/* Page info */
+
+.overview-page .page-info {
+    margin-left: 8px;
+
+    flex: 0 0 auto;
+
+    font-size: 7px;
+    line-height: 1;
+
+    color: #666;
+
+    white-space: nowrap;
+}
+
+
+/* Submission ID */
+
+.overview-page .submission-id {
+    margin-left: auto;
+
+    flex: 0 0 auto;
+
+    font-size: 7px;
+    line-height: 1;
+
+    color: #666;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   PAGE 2 CONTENT
+========================================================= */
+
+.overview-page .page-content,
+.overview-page .ai-overview {
+    position: relative;
+
+    display: block;
+
+    width: 100%;
+
+    margin: 0;
+    padding: 24px 0 0 0;
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.overview-page .summary {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 30px;
+
+    margin: 0 0 20px 0;
+    padding: 0;
+}
+
+
+.overview-page .summary-left {
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+.overview-page .summary-left h1 {
+    position: relative;
+
+    margin: 0 0 10px 0;
+    padding: 0;
+
+    font-size: 24px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #111827;
+}
+
+
+.overview-page .summary-left p {
+    margin: 0;
+    padding: 0;
+
+    max-width: 500px;
+
+    font-size: 10px;
+
+    line-height: 1.55;
+
+    color: #555;
+}
+
+
+/* =========================================================
+   REVIEW RECOMMENDED
+========================================================= */
+
+.overview-page .notice-box {
+    width: 350px;
+    min-width: 350px;
+
+    height: 72px;
+
+    padding: 13px 15px;
+
+    background: #edf5ff;
+
+    border-radius: 10px;
+
+    box-sizing: border-box;
+}
+
+
+.overview-page .notice-box h4 {
+    margin: 0 0 7px 0;
+    padding: 0;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #174d88;
+}
+
+
+.overview-page .notice-box p {
+    margin: 0;
+    padding: 0;
+
+    font-size: 9px;
+
+    line-height: 1.5;
+
+    color: #555;
+}
+
+
+/* =========================================================
+   SECTION STACK
+========================================================= */
+
+.overview-page .section-stack {
+    display: block;
+
+    width: 100%;
+
+    margin: 0;
+    padding: 0;
+}
+
+
+/* =========================================================
+   DETECTION GROUPS
+========================================================= */
+
+.overview-page .groups {
+    margin: 0;
+    padding: 13px 0 0 0;
+
+    border-top: 1px solid #dcdcdc;
+}
+
+
+.overview-page .groups h3 {
+    margin: 0 0 13px 0;
+    padding: 0;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #222;
+
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   DETECTION GROUP ITEM
+========================================================= */
+
+.overview-page .group-item {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin: 0 0 13px 0;
+    padding: 0 0 11px 0;
+
+    border-bottom: 1px solid #eeeeee;
+}
+
+
+.overview-page .group-item:last-child {
+    margin-bottom: 0;
+}
+
+
+.overview-page .group-icon {
+    width: 15px;
+    height: 15px;
+
+    margin-top: 1px;
+
+    flex-shrink: 0;
+}
+
+
+.overview-page .group-title {
+    margin: 0 0 4px 0;
+    padding: 0;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    line-height: 1.25;
+
+    color: #222;
+}
+
+
+.overview-page .group-desc {
+    margin: 0;
+    padding: 0;
+
+    font-size: 9px;
+
+    line-height: 1.45;
+
+    color: #555;
+}
+
+
+/* =========================================================
+   DISCLAIMER
+========================================================= */
+
+.overview-page .disclaimer {
+    margin: 16px 0 0 0;
+    padding: 0;
+}
+
+
+.overview-page .disclaimer h4 {
+    margin: 0 0 7px 0;
+    padding: 0;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #222;
+}
+
+
+.overview-page .disclaimer p {
+    margin: 0;
+    padding: 0;
+
+    font-size: 9px;
+
+    line-height: 1.55;
+
+    color: #444;
+}
+
+
+/* =========================================================
+   FAQ
+========================================================= */
+
+.overview-page .faq {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 30px;
+
+    margin: 18px 0 0 0;
+    padding: 0;
+}
+
+
+.overview-page .faq-left {
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+.overview-page .faq-left h3 {
+    margin: 0 0 12px 0;
+    padding: 0;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #222;
+}
+
+
+.overview-page .faq-left h4 {
+    margin: 10px 0 5px 0;
+    padding: 0;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #222;
+}
+
+
+.overview-page .faq-left p {
+    margin: 0 0 0 0;
+    padding: 0;
+
+    font-size: 9px;
+
+    line-height: 1.55;
+
+    color: #444;
+}
+
+
+/* =========================================================
+   FAQ IMAGE
+========================================================= */
+
+.overview-page .faq-right {
+    width: 125px;
+    min-width: 125px;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: flex-start;
+
+    padding-top: 5px;
+}
+
+
+.overview-page .faq-right img,
+.overview-page .faq-image {
+    width: 85px;
+    height: auto;
+
+    display: block;
+}
+
+
+/* =========================================================
+   PAGE 2 FOOTER
+========================================================= */
+
+.overview-page .footer {
+    position: absolute;
+
+    left: 45px;
+    right: 45px;
+
+    bottom: 20px;
+
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+
+    margin: 0;
+    padding: 10px 0 0 0;
+
+    border-top: 1px solid #dddddd;
+
+    font-size: 8px;
+
+    color: #666;
+}
+
+
+.overview-page .footer-logo {
+    width: 75px;
+    height: auto;
+
+    display: block;
+}
+
+
+.overview-page .footer-page {
+    margin-left: 10px;
+
+    font-size: 8px;
+
+    color: #666;
+}
+
+
+.overview-page .footer-id {
+    margin-left: auto;
+
+    font-size: 8px;
+
+    color: #666;
+}
+
+
+/* =========================================================
+   ORIGINAL PDF VIEWER
+   Browser only
+========================================================= */
+
+.original-submission-viewer {
+    display: block;
+
+    width: 215.9mm;
+
+    margin: 0 auto 20px auto;
+}
+
+
+/* =========================================================
+   PDF VIEWER / CANVAS
+========================================================= */
+
+.document-pages-root {
+    display: block;
+}
+
+
+.document-page {
+    width: 215.9mm;
+    min-height: 279.4mm;
+
+    margin: 0 auto 20px auto;
+
+    background: #ffffff;
+}
+
+
+.document-content {
+    padding-top: 16px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+
+.viewer-toolbar {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 8px 0 12px 0;
+
+    border-bottom: 1px solid #ececec;
+}
+
+
+.viewer-title {
+    font-size: 12px;
+
+    color: #666;
+
+    font-weight: 600;
+}
+
+
+.viewer-controls {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+.viewer-controls button {
+    border: 1px solid #d0d0d0;
+
+    background: #ffffff;
+
+    border-radius: 4px;
+
+    padding: 6px 10px;
+
+    cursor: pointer;
+
+    font-size: 13px;
+}
+
+
+.zoom-level {
+    min-width: 42px;
+
+    text-align: center;
+
+    font-size: 12px;
+
+    color: #555;
+}
+
+
+.viewer-body {
+    flex: 1;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 16px;
+
+    overflow: auto;
+
+    padding: 10px 0 8px 0;
+}
+
+
+.pdf-page-card {
+    display: flex;
+
+    justify-content: center;
+
+    align-items: flex-start;
+
+    padding: 8px 0;
+}
+
+
+.canvas-shell {
+    position: relative;
+
+    display: inline-block;
+
+    background: #ffffff;
+
+    border: 1px solid #d8d8d8;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    overflow: hidden;
+}
+
+
+.canvas-shell canvas {
+    display: block;
+
+    max-width: 100%;
+
+    height: auto;
+}
+
+
+/* =========================================================
+   PDF TEXT LAYER
+========================================================= */
+
+.textLayer {
+    position: absolute;
+
+    inset: 0;
+
+    overflow: hidden;
+
+    opacity: 0.25;
+
+    line-height: 1;
+
+    pointer-events: auto;
+
+    user-select: text;
+}
+
+
+.textLayer span {
+    position: absolute;
+
+    white-space: pre;
+
+    transform-origin: 0 0;
+
+    color: transparent;
+
+    cursor: text;
+}
+
+
+.textLayer ::selection {
+    background: rgba(0, 120, 215, 0.25);
+}
+
+
+/* =========================================================
+   SEARCH HIGHLIGHT
+========================================================= */
+
+.textLayer .highlight {
+    background: #ffeb3b;
+
+    border-radius: 2px;
+}
+
+
+.textLayer .highlight.selected {
+    background: #ff9800;
+}
+
+
+/* =========================================================
+   LOADING / ERROR
+========================================================= */
+
+.loading,
+.pdf-loading {
+    width: 100%;
+
+    text-align: center;
+
+    padding: 60px;
+
+    color: #666;
+
+    font-size: 14px;
+}
+
+
+.pdf-error {
+    width: 100%;
+
+    text-align: center;
+
+    color: #d32f2f;
+
+    padding: 40px;
+
+    font-size: 14px;
+}
+
+
+/* =========================================================
+   DOCUMENT PREVIEW
+========================================================= */
+
+.document-preview {
+    width: 100%;
+}
+
+
+.document-preview::-webkit-scrollbar {
+    width: 10px;
+}
+
+
+.document-preview::-webkit-scrollbar-track {
+    background: #efefef;
+}
+
+
+.document-preview::-webkit-scrollbar-thumb {
+    background: #c5c5c5;
+
+    border-radius: 5px;
+}
+
+
+.document-preview img {
+    max-width: 100%;
+    height: auto;
+}
+
+
+.document-preview table {
+    width: 100%;
+
+    border-collapse: collapse;
+}
+
+
+.document-preview td,
+.document-preview th {
+    border: 1px solid #ddd;
+
+    padding: 8px;
+}
+
+
+.document-preview a {
+    color: #1976d2;
+
+    text-decoration: none;
+}
+
+
+.document-preview a:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================================
+   LETTER PAGE
+========================================================= */
+
+@page {
+    size: Letter;
+    margin: 0;
+}
+
+
+/* =========================================================
+   PRINT / PDF
+========================================================= */
+
+@media print {
+
+    html,
+    body {
+        background: #ffffff !important;
+    }
+
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .report-download-bar {
+        display: none !important;
+    }
+
+    .original-submission-viewer,
+    #pdf-container {
+        display: none !important;
+    }
+
+    .page,
+    .cover-page,
+    .overview-page {
+        width: 215.9mm !important;
+        height: 279.4mm !important;
+        min-height: 279.4mm !important;
+
+        margin: 0 !important;
+
+        border: none !important;
+
+        box-shadow: none !important;
+
+        overflow: hidden !important;
+
+        page-break-after: always !important;
+        break-after: page !important;
+    }
+
+    .cover-page {
+        position: relative !important;
+    }
+
+    .cover-header {
+        position: absolute !important;
+
+        top: 18px !important;
+        left: 45px !important;
+        right: 45px !important;
+    }
+
+    .cover-content {
+        position: absolute !important;
+
+        top: 430px !important;
+        left: 45px !important;
+        right: 45px !important;
+    }
+
+    .cover-footer {
+        position: absolute !important;
+
+        left: 45px !important;
+        right: 45px !important;
+
+        bottom: 28px !important;
+    }
+
+    .overview-page {
+        position: relative !important;
+
+        padding: 0 45px 70px 45px !important;
+    }
+
+    .overview-page .header {
+        position: relative !important;
+
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+    }
+
+    .overview-page .page-content,
+    .overview-page .ai-overview {
+        position: relative !important;
+
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+
+        padding-top: 24px !important;
+    }
+
+    .overview-page .footer {
+        position: absolute !important;
+
+        left: 45px !important;
+        right: 45px !important;
+
+        bottom: 28px !important;
+    }
+
+    /* Hide HTML Turnalyze headers/footers - canonical decoration applied via PyMuPDF */
+    .cover-header,
+    .cover-footer {
+        display: none !important;
+    }
+
+    .overview-page .header {
+        visibility: hidden !important;
+        height: 55px !important;
+        min-height: 55px !important;
+    }
+
+    .overview-page .footer {
+        display: none !important;
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE BROWSER VIEW
+========================================================= */
+
+@media screen and (max-width: 900px) {
+
+    body {
+        padding: 10px;
+    }
+
+
+    .report-download-bar {
+        width: 100%;
+    }
+
+
+    .page,
+    .cover-page,
+    .overview-page {
+        width: 100%;
+        min-width: 0;
+
+        height: auto;
+        min-height: 0;
+
+        margin: 0 0 20px 0;
+
+        border: none;
+
+        box-shadow: none;
+    }
+
+
+    /* Cover */
+
+    .cover-page {
+        min-height: 900px;
+    }
+
+
+    .cover-header {
+        left: 25px;
+        right: 25px;
+    }
+
+
+    .cover-content {
+        left: 25px;
+        right: 25px;
+
+        top: 300px;
+    }
+
+
+    .cover-details-wrapper {
+        flex-direction: column;
+
+        gap: 25px;
+    }
+
+
+    .cover-details {
+        width: 100%;
+        min-width: 0;
+    }
+
+
+    .cover-stats {
+        width: 100%;
+        min-width: 0;
+
+        height: auto;
+    }
+
+
+    /* Overview */
+
+    .overview-page {
+        padding-left: 25px;
+        padding-right: 25px;
+    }
+
+
+    .overview-page .summary {
+        flex-direction: column;
+    }
+
+
+    .overview-page .notice-box {
+        width: 100%;
+        min-width: 0;
+    }
+
+
+    .overview-page .faq {
+        flex-direction: column;
+    }
+
+
+    .overview-page .faq-right {
+        width: 100%;
+        min-width: 0;
+
+        justify-content: flex-start;
+    }
+
+
+    .original-submission-viewer {
+        width: 100%;
+    }
+}
+
+/* ---------- PAGE ---------- */
+
+body.pdf-mode .page,
+body.pdf-mode .cover-page,
+body.pdf-mode .overview-page {
+    width: 215.9mm !important;
+    height: 279.4mm !important;
+    min-height: 279.4mm !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: 0.5pt solid #d8d8d8 !important;
+    box-shadow: none !important;
+
+    overflow: hidden !important;
+
+    box-sizing: border-box !important;
+}
+
+
+/* =========================================================
+   COVER PAGE
+   ========================================================= */
+
+body.pdf-mode .cover-header {
+    position: absolute !important;
+
+    top: 18px !important;
+    left: 45px !important;
+    right: 45px !important;
+
+    width: auto !important;
+}
+
+
+body.pdf-mode .cover-content {
+    position: absolute !important;
+
+    top: 430px !important;
+    left: 45px !important;
+    right: 45px !important;
+
+    width: auto !important;
+}
+
+
+/* Keep Document Details + Statistics horizontal */
+
+body.pdf-mode .cover-details-wrapper {
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+
+    gap: 55px !important;
+
+    width: 100% !important;
+}
+
+
+body.pdf-mode .cover-details {
+    flex: 0 0 420px !important;
+
+    width: 420px !important;
+    min-width: 420px !important;
+}
+
+
+body.pdf-mode .cover-stats {
+    flex: 0 0 140px !important;
+
+    width: 140px !important;
+    min-width: 140px !important;
+}
+
+
+/* Cover footer */
+
+body.pdf-mode .cover-footer {
+    position: absolute !important;
+
+    left: 45px !important;
+    right: 45px !important;
+    bottom: 28px !important;
+
+    width: auto !important;
+}
+
+
+/* =========================================================
+   PAGE 2
+   ========================================================= */
+
+body.pdf-mode .overview-page {
+    position: relative !important;
+
+    padding: 0 45px 70px 45px !important;
+}
+
+
+/* Header */
+
+body.pdf-mode .overview-page .header {
+    position: relative !important;
+
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    width: 100% !important;
+
+    height: 55px !important;
+    min-height: 55px !important;
+}
+
+
+/* Main summary MUST stay horizontal */
+
+body.pdf-mode .overview-page .summary {
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    justify-content: space-between !important;
+
+    align-items: flex-start !important;
+
+    gap: 30px !important;
+
+    width: 100% !important;
+}
+
+
+body.pdf-mode .overview-page .summary-left {
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+}
+
+
+body.pdf-mode .overview-page .notice-box {
+    flex: 0 0 350px !important;
+
+    width: 350px !important;
+    min-width: 350px !important;
+}
+
+
+/* =========================================================
+   FAQ MUST STAY HORIZONTAL
+   ========================================================= */
+
+body.pdf-mode .overview-page .faq {
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    justify-content: space-between !important;
+
+    align-items: flex-start !important;
+
+    gap: 30px !important;
+
+    width: 100% !important;
+}
+
+
+body.pdf-mode .overview-page .faq-left {
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+}
+
+
+body.pdf-mode .overview-page .faq-right {
+    flex: 0 0 125px !important;
+
+    width: 125px !important;
+    min-width: 125px !important;
+
+    display: flex !important;
+
+    justify-content: center !important;
+
+    align-items: flex-start !important;
+}
+
+
+/* FAQ image */
+
+body.pdf-mode .overview-page .faq-image,
+body.pdf-mode .overview-page .faq-right img {
+    width: 85px !important;
+
+    height: auto !important;
+
+    display: block !important;
+}
+
+
+/* =========================================================
+   PAGE 2 CONTENT
+   ========================================================= */
+
+body.pdf-mode .overview-page .page-content,
+body.pdf-mode .overview-page .ai-overview {
+    position: relative !important;
+
+    display: block !important;
+
+    width: 100% !important;
+
+    padding-top: 24px !important;
+}
+
+
+/* Footer */
+
+body.pdf-mode .overview-page .footer {
+    position: absolute !important;
+
+    left: 45px !important;
+    right: 45px !important;
+    bottom: 28px !important;
+
+    width: auto !important;
+}
+/* =========================================================
+   TURNALYZE PDF MODE - FORCE DESKTOP LETTER LAYOUT
+   ========================================================= */
+
+body.pdf-mode {
+    width: 100% !important;
+    min-width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: #ffffff !important;
+}
+
+
+/* =========================================================
+   LETTER PAGES
+========================================================= */
+
+body.pdf-mode .page,
+body.pdf-mode .cover-page,
+body.pdf-mode .overview-page {
+
+    width: 215.9mm !important;
+    height: 279.4mm !important;
+    min-height: 279.4mm !important;
+
+    margin: 0 auto !important;
+
+    box-sizing: border-box !important;
+
+    overflow: hidden !important;
+
+    page-break-after: always !important;
+    break-after: page !important;
+
+    border: none !important;
+    box-shadow: none !important;
+}
+
+
+/* =========================================================
+   PAGE 1 — COVER
+========================================================= */
+
+body.pdf-mode .cover-page {
+    position: relative !important;
+}
+
+
+/* Header */
+
+body.pdf-mode .cover-header {
+    position: absolute !important;
+
+    top: 18px !important;
+    left: 45px !important;
+    right: 45px !important;
+
+    width: auto !important;
+
+    height: 55px !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+
+    align-items: center !important;
+}
+
+
+/* Cover content */
+
+body.pdf-mode .cover-content {
+    position: absolute !important;
+
+    top: 430px !important;
+    left: 45px !important;
+    right: 45px !important;
+
+    width: auto !important;
+}
+
+
+/* =========================================================
+   COVER DOCUMENT DETAILS + STATS
+========================================================= */
+
+body.pdf-mode .cover-details-wrapper {
+
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    align-items: flex-start !important;
+
+    justify-content: flex-start !important;
+
+    gap: 55px !important;
+
+    width: 100% !important;
+
+    flex-wrap: nowrap !important;
+}
+
+
+body.pdf-mode .cover-details {
+
+    width: 420px !important;
+    min-width: 420px !important;
+
+    flex: 0 0 420px !important;
+}
+
+
+body.pdf-mode .cover-stats {
+
+    width: 140px !important;
+    min-width: 140px !important;
+
+    flex: 0 0 140px !important;
+
+    height: 115px !important;
+
+    margin-top: -4px !important;
+}
+
+
+/* Stats items */
+
+body.pdf-mode .cover-stat-item {
+
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    flex-wrap: nowrap !important;
+
+    white-space: nowrap !important;
+}
+
+
+/* Cover footer */
+
+body.pdf-mode .cover-footer {
+
+    position: absolute !important;
+
+    left: 45px !important;
+    right: 45px !important;
+
+    bottom: 28px !important;
+
+    width: auto !important;
+}
+
+
+/* =========================================================
+   PAGE 2 — OVERVIEW
+========================================================= */
+
+body.pdf-mode .overview-page {
+
+    position: relative !important;
+
+    padding: 70px 45px 70px 45px !important;
+}
+
+
+/* Header */
+
+body.pdf-mode .overview-page .header {
+
+    position: relative !important;
+
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+
+    width: 100% !important;
+
+    height: 55px !important;
+    min-height: 55px !important;
+
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    align-items: center !important;
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+body.pdf-mode .overview-page .summary {
+
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    flex-wrap: nowrap !important;
+
+    justify-content: space-between !important;
+
+    align-items: flex-start !important;
+
+    gap: 30px !important;
+
+    width: 100% !important;
+}
+
+
+body.pdf-mode .overview-page .summary-left {
+
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+}
+
+
+body.pdf-mode .overview-page .notice-box {
+
+    flex: 0 0 350px !important;
+
+    width: 350px !important;
+    min-width: 350px !important;
+}
+
+
+/* =========================================================
+   FAQ
+========================================================= */
+
+body.pdf-mode .overview-page .faq {
+
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    flex-wrap: nowrap !important;
+
+    justify-content: space-between !important;
+
+    align-items: flex-start !important;
+
+    gap: 30px !important;
+
+    width: 100% !important;
+}
+
+
+body.pdf-mode .overview-page .faq-left {
+
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+}
+
+
+body.pdf-mode .overview-page .faq-right {
+
+    flex: 0 0 125px !important;
+
+    width: 125px !important;
+
+    min-width: 125px !important;
+
+    display: flex !important;
+
+    justify-content: center !important;
+
+    align-items: flex-start !important;
+}
+
+
+body.pdf-mode .overview-page .faq-image,
+body.pdf-mode .overview-page .faq-right img {
+
+    width: 85px !important;
+
+    height: auto !important;
+
+    display: block !important;
+}
+
+
+/* =========================================================
+   PAGE 2 CONTENT
+========================================================= */
+
+body.pdf-mode .overview-page .page-content,
+body.pdf-mode .overview-page .ai-overview {
+
+    position: relative !important;
+
+    display: block !important;
+
+    width: 100% !important;
+
+    padding-top: 24px !important;
+}
+
+
+/* =========================================================
+   PAGE 2 FOOTER
+========================================================= */
+
+body.pdf-mode .overview-page .footer {
+
+    position: absolute !important;
+
+    left: 45px !important;
+    right: 45px !important;
+
+    bottom: 28px !important;
+
+    width: auto !important;
+}
+
+
+/* =========================================================
+   NEVER ACTIVATE MOBILE FLEX LAYOUT IN PDF
+========================================================= */
+
+body.pdf-mode .summary {
+    flex-direction: row !important;
+}
+
+body.pdf-mode .faq {
+    flex-direction: row !important;
+}
+
+body.pdf-mode .cover-details-wrapper {
+    flex-direction: row !important;
+}
+
+/* =========================================================
+   HIDE HTML TURNALYZE HEADERS/FOOTERS IN PDF MODE
+   Canonical decoration is applied via PyMuPDF
+======================================================== */
+
+body.pdf-mode .cover-header,
+body.pdf-mode .cover-footer {
+    display: none !important;
+}
+
+body.pdf-mode .overview-page .header {
+    visibility: hidden !important;
+    height: 55px !important;
+    min-height: 55px !important;
+}
+
+body.pdf-mode .overview-page .footer {
+    display: none !important;
+}

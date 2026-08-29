@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+</head>
+<body>
+    <h2>Admin Dashboard</h2>
+    <p>{{ message }}</p>
+    <form method="get" action="/admin">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search users">
+        <button type="submit">Search</button>
+    </form>
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Uploads</th>
+                <th>Reports</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.fullname }}</td>
+                <td>{{ user.phone or '' }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.plan }}</td>
+                <td>{{ user.status }}</td>
+                <td>{{ user.upload_count }}</td>
+                <td>{{ user.report_count }}</td>
+                <td>{{ user.created_at or '' }}</td>
+                <td>
+                    <a href="/admin/user/{{ user.id }}/toggle-status">Toggle</a>
+                    <a href="/admin/user/{{ user.id }}/reset-password">Reset Password</a>
+                    <a href="/admin/user/{{ user.id }}/assign-plan/Free">Free</a>
+                    <a href="/admin/user/{{ user.id }}/assign-plan/Pro">Pro</a>
+                    <a href="/admin/user/{{ user.id }}/toggle-ai">AI</a>
+                    <a href="/admin/user/{{ user.id }}/toggle-pdf">PDF</a>
+                    <a href="/admin/user/{{ user.id }}/delete">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

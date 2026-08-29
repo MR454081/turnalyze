@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Turnalyze AI Report</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/report.css') }}">
+</head>
+
+<body class="{% if for_pdf %}pdf-mode{% endif %}">
+
+    <!-- =====================================================
+         REPORT META
+    ====================================================== -->
+
+    <div id="report-meta"
+         data-submission-id="{{ submission_id }}"
+         data-total-pages="{{ page_count }}"
+         data-pdf-url="{{ pdf_url }}"
+         data-report-id="{{ report_id }}">
+    </div>
+
+
+    <!-- =====================================================
+         DOWNLOAD BUTTON
+         CSS hides this automatically in PDF/print mode
+    ====================================================== -->
+    {% if report_id %}
+    <div class="report-download-bar">
+        <a href="{{ url_for('download_report', report_id=report_id) }}"
+           class="report-download-button">
+            Download PDF
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- =====================================================
+         PAGE 1 - COVER PAGE
+    ====================================================== -->
+
+    <section class="page cover-page">
+
+        {% if not for_pdf %}
+        <!-- COVER HEADER -->
+
+        <header class="cover-header">
+
+            <div class="cover-logo-area">
+                <img src="{{ url_for('static',
+                    filename='images/turnitin-logo.png') }}"
+                     class="cover-logo"
+                     alt="Turnalyze">
+            </div>
+
+            <div class="cover-page-info">
+                Page 1 of {{ page_count }} • Cover Page
+            </div>
+
+            <div class="cover-submission-id">
+                Submission ID {{ submission_id }}
+            </div>
+
+        </header>
+        {% endif %}
+
+
+        <!-- COVER CONTENT -->
+
+        <section class="cover-content">
+
+        <h1 class="cover-file-title">
+            {{ student_name }}
+        </h1>
+
+        <h2 class="cover-document-title">
+            {{ document_title }}
+        </h2>
+
+
+        <div class="cover-meta">
+
+            <div class="cover-meta-item">
+                <img src="{{ url_for('static',
+                    filename='images/icon2.png') }}"
+                     class="cover-small-icon"
+                     alt="">
+                <span>{{ category }}</span>
+            </div>
+
+        </div>
+
+
+            <hr class="cover-divider">
+
+
+            <!-- DOCUMENT DETAILS -->
+
+            <div class="cover-details-wrapper">
+
+                <div class="cover-details">
+
+                    <h3 class="cover-details-title">
+                        Document Details
+                    </h3>
+
+
+                    <div class="cover-detail-block">
+                        <span class="cover-label">
+                            Submission ID
+                        </span>
+
+                        <span class="cover-value">
+                            {{ submission_id }}
+                        </span>
+                    </div>
+
+
+                    <div class="cover-detail-block">
+                        <span class="cover-label">
+                            Submission Date
+                        </span>
+
+                        <span class="cover-value">
+                            {{ submission_date }}
+                        </span>
+                    </div>
+
+
+                    <div class="cover-detail-block">
+                        <span class="cover-label">
+                            Download Date
+                        </span>
+
+                        <span class="cover-value">
+                            {{ download_date }}
+                        </span>
+                    </div>
+
+
+                    <div class="cover-detail-block">
+                        <span class="cover-label">
+                            File Name
+                        </span>
+
+                        <span class="cover-value">
+                            {{ filename }}
+                        </span>
+                    </div>
+
+
+                    <div class="cover-detail-block">
+                        <span class="cover-label">
+                            File Size
+                        </span>
+
+                        <span class="cover-value">
+                            {{ file_size }}
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <!-- STATISTICS -->
+
+                <div class="cover-stats">
+
+                    <div class="cover-stat-item">
+
+                        <span class="cover-stat-number">
+                            {{ pages }}
+                        </span>
+
+                        <span class="cover-stat-label">
+                            Pages
+                        </span>
+
+                    </div>
+
+
+                    <div class="cover-stat-item">
+
+                        <span class="cover-stat-number">
+                            {{ "{:,}".format(words|int) }}
+                        </span>
+
+                        <span class="cover-stat-label">
+                            Words
+                        </span>
+
+                    </div>
+
+
+                    <div class="cover-stat-item">
+
+                        <span class="cover-stat-number">
+                            {{ "{:,}".format(characters|int) }}
+                        </span>
+
+                        <span class="cover-stat-label">
+                            Characters
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        {% if not for_pdf %}
+        <!-- COVER FOOTER -->
+
+        <footer class="cover-footer">
+
+            <div class="cover-footer-left">
+
+                <img src="{{ url_for('static',
+                    filename='images/turnitin-logo.png') }}"
+                     class="cover-footer-logo"
+                     alt="Turnalyze">
+
+                <span class="cover-footer-page">
+                    Page 1 of {{ page_count }}
+                </span>
+
+            </div>
+
+            <span class="cover-footer-id">
+                Submission ID: {{ submission_id }}
+            </span>
+
+        </footer>
+        {% endif %}
+
+    </section>
+
+
+    <!-- =====================================================
+         PAGE 2 - AI WRITING OVERVIEW
+    ====================================================== -->
+
+    <section class="page overview-page">
+
+        {% if not for_pdf %}
+        <!-- HEADER -->
+
+        <header class="header">
+
+            <div class="logo-area">
+
+                <img src="{{ url_for('static',
+                    filename='images/turnitin-logo.png') }}"
+                     class="logo"
+                     alt="Turnalyze">
+
+            </div>
+
+            <div class="page-info">
+                Page 2 of {{ page_count }} • AI Writing Overview
+            </div>
+
+            <div class="submission-id">
+                Submission ID {{ submission_id }}
+            </div>
+
+        </header>
+        {% endif %}
+
+
+        <!-- CONTENT -->
+
+        <section class="page-content ai-overview">
+
+            <!-- SUMMARY -->
+
+            <div class="summary">
+
+                <div class="summary-left">
+
+                    <h1>
+                        {{ ai_score }}% detected as AI
+                    </h1>
+
+                    <p>
+                        The percentage indicates the combined amount of likely AI-generated text as well as likely AI-generated text that was also likely revised by AI.
+                    </p>
+
+                </div>
+
+
+                <div class="notice-box">
+
+                    <h4>
+                        Caution: Review required.
+                    </h4>
+
+                    <p>
+                        AI detection should support human judgement.
+                        Always review highlighted sections before
+                        making academic decisions.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- DETECTION RESULT -->
+
+            <div class="section-stack">
+
+                <section class="groups">
+
+                    <div class="group-item">
+
+                        <img src="{{ url_for('static',
+                            filename='images/icon5.png') }}"
+                             class="group-icon"
+                             alt="">
+
+                        <div>
+
+                            <div class="group-title">
+                                {{ ai_score }}% AI-generated
+                            </div>
+
+                            <div class="group-desc">
+                                Likely generated or likely generated
+                                and revised by AI.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- DISCLAIMER -->
+
+                <section class="disclaimer">
+
+                    <h4>
+                        Disclaimer
+                    </h4>
+
+                    <p>
+                        AI writing detection is intended to assist
+                        reviewers. Detection scores are probabilistic
+                        and may produce false positives and false
+                        negatives. The report should never be the only
+                        basis for academic decisions. Results should be
+                        independently verified against institutional
+                        standards and original source material.
+                    </p>
+
+                </section>
+
+            </div>
+
+        </section>
+
+
+        {% if not for_pdf %}
+        <!-- OVERVIEW FOOTER -->
+
+        <footer class="footer">
+
+            <img src="{{ url_for('static',
+                filename='images/turnitin-logo.png') }}"
+                 class="footer-logo"
+                 alt="Turnalyze">
+
+            <span class="footer-page">
+                Page 2 of {{ page_count }}
+            </span>
+
+            <span class="footer-id">
+                Submission ID: {{ submission_id }}
+            </span>
+
+        </footer>
+        {% endif %}
+
+    </section>
+
+
+    <!-- =====================================================
+         ORIGINAL SUBMISSION CONTAINER
+         Browser viewer only.
+         
+         It stays empty during PDF generation.
+         The browser JS fills it with PDF.js.
+    ====================================================== -->
+
+    {% if not for_pdf %}
+    <div id="pdf-container"
+     class="original-submission-viewer">
+    </div>
+    {% endif %}
+
+
+    <!-- =====================================================
+         JAVASCRIPT META
+    ====================================================== -->
+
+    <script>
+        const reportMeta =
+            document.getElementById("report-meta");
+
+        if (reportMeta) {
+
+            window.TURNALYZE_PDF_URL =
+                reportMeta.dataset.pdfUrl || "";
+
+            window.TURNALYZE_SUBMISSION_ID =
+                reportMeta.dataset.submissionId || "";
+
+            window.TURNALYZE_REPORT_ID =
+                reportMeta.dataset.reportId || "";
+
+        }
+    </script>
+
+
+    <!-- =====================================================
+         PDF.JS VIEWER
+         
+         pdfviewer.js should check whether
+         #pdf-container exists and then render it.
+    ====================================================== -->
+
+    {% if not for_pdf %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
+
+    <script src="{{ url_for('static',
+    filename='js/pdfviewer.js') }}"></script>
+    {% endif %}
+
+</body>
+
+</html>

@@ -1,0 +1,28 @@
+{
+  "total_samples": 790,
+  "human_samples": 395,
+  "ai_samples": 395,
+  "train_count": 553,
+  "validation_count": 118,
+  "test_count": 119,
+  "challenge_count": 200,
+  "duplicates_removed": 0,
+  "invalid_rows_removed": 910,
+  "average_text_length": 461.49367088607596,
+  "minimum_text_length": 200,
+  "maximum_text_length": 1360,
+  "dataset_sources": [
+    {
+      "name": "student_and_llm_essays",
+      "tag": "student_llm_essays",
+      "samples_loaded": 1200
+    },
+    {
+      "name": "Project Gutenberg",
+      "tag": "gutenberg",
+      "samples_loaded": 500
+    }
+  ],
+  "split_logic": "by_source_id",
+  "random_seed": 42
+}

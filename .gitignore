@@ -1,0 +1,40 @@
+# Python environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# User uploads and generated reports
+uploads/
+reports/
+
+# Generated PDF/page files
+static/pages/
+static/pdfs/
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
+
+# Large ML model files
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Temporary/debug output
+smoke_test_output/

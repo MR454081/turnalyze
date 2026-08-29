@@ -1,0 +1,408 @@
+import re
+import os
+import time
+import logging
+from typing import List, Dict, Optional, Tuple
+
+from docx import Document
+from pypdf import PdfReader
+
+logger = logging.getLogger(__name__)
+
+# =========================================================
+# MODEL CONFIGURATION
+# =========================================================
+
+MODEL_ID = "Oxidane/tmr-ai-text-detector"
+MAX_TOKENS = 512
+MIN_CHUNK_WORDS = 40
+BATCH_SIZE = 8
+
+# =========================================================
+# GLOBAL MODEL CACHE
+# =========================================================
+
+_tokenizer = None
+_model = None
+_device = None
+
+
+def _get_device() -> str:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
+
+
+def _load_model():
+    global _tokenizer, _model, _device
+
+    if _tokenizer is not None and _model is not None:
+        return _tokenizer, _model, _device
+
+    _device = _get_device()
+    load_start = time.time()
+
+    try:
+        from transformers import AutoTokenizer, AutoModelForSequenceClassification
+        import torch
+    except Exception as exc:
+        raise RuntimeError(
+            f"Failed to import transformers/torch for detector: {exc}"
+        ) from exc
+
+    logger.info(
+        "Loading detector model: %s on device=%s", MODEL_ID, _device
+    )
+
+    _tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    _model = AutoModelForSequenceClassification.from_pretrained(MODEL_ID)
+    _model.eval()
+
+    if _device == "cuda":
+        _model = _model.cuda()
+
+    load_time = time.time() - load_start
+    logger.info(
+        "Detector model loaded in %.2f seconds. Labels: %s",
+        load_time,
+        _model.config.id2label,
+    )
+
+    return _tokenizer, _model, _device
+
+
+# =========================================================
+# TEXT EXTRACTION
+# =========================================================
+
+def read_docx(path: str) -> str:
+    doc = Document(path)
+    return "\n".join(p.text for p in doc.paragraphs)
+
+
+def read_pdf(path: str) -> str:
+    reader = PdfReader(path)
+    text = ""
+    for page in reader.pages:
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text + "\n"
+    return text
+
+
+# =========================================================
+# TEXT CLEANING
+# =========================================================
+
+def _clean_text(raw_text: str) -> str:
+    text = raw_text
+
+    # Remove references/bibliography sections if clearly demarcated
+    ref_match = re.search(
+        r"\n\s*(references|bibliography)\s*\n", text, re.IGNORECASE
+    )
+    if ref_match:
+        text = text[: ref_match.start()]
+
+    # Normalize whitespace but preserve paragraph structure
+    text = re.sub(r"\r\n", "\n", text)
+    text = re.sub(r"\r", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
+
+
+# =========================================================
+# CHUNKING
+# =========================================================
+
+def _split_into_paragraphs(text: str) -> List[str]:
+    return [p.strip() for p in text.split("\n\n") if p.strip()]
+
+
+def _split_paragraph_into_sentences(paragraph: str) -> List[str]:
+    sentences = re.split(r"(?<=[.!?])\s+", paragraph)
+    return [s.strip() for s in sentences if s.strip()]
+
+
+def _token_count(tokenizer, text: str) -> int:
+    return len(tokenizer.encode(text, add_special_tokens=True))
+
+
+def _chunk_text(tokenizer, text: str) -> List[str]:
+    """
+    Paragraph-aware chunking:
+    1. Split by paragraph.
+    2. If a paragraph is short enough, keep it as a chunk.
+    3. If a paragraph is too long, split by sentences and recombine
+       into chunks that stay under MAX_TOKENS and have at least
+       MIN_CHUNK_WORDS.
+    """
+    paragraphs = _split_into_paragraphs(text)
+    chunks: List[str] = []
+    current: List[str] = []
+    current_tokens = 0
+
+    def flush_current():
+        nonlocal current, current_tokens
+        if current:
+            chunks.append(" ".join(current))
+            current = []
+            current_tokens = 0
+
+    for para in paragraphs:
+        para_tokens = _token_count(tokenizer, para)
+
+        # If the entire paragraph fits, try to add it to current chunk
+        if para_tokens <= MAX_TOKENS:
+            candidate_tokens = current_tokens + para_tokens + (1 if current else 0)
+            if candidate_tokens <= MAX_TOKENS:
+                current.append(para)
+                current_tokens = candidate_tokens
+                continue
+            else:
+                flush_current()
+                current.append(para)
+                current_tokens = para_tokens
+                continue
+
+        # Paragraph is too long — split by sentences
+        sentences = _split_paragraph_into_sentences(para)
+        for sent in sentences:
+            sent_tokens = _token_count(tokenizer, sent)
+
+            if sent_tokens > MAX_TOKENS:
+                # Single sentence exceeds limit — hard truncate
+                trunc = tokenizer.decode(
+                    tokenizer.encode(sent, add_special_tokens=True)[:MAX_TOKENS],
+                    skip_special_tokens=True,
+                )
+                flush_current()
+                chunks.append(trunc)
+                continue
+
+            candidate_tokens = current_tokens + sent_tokens + (1 if current else 0)
+            if candidate_tokens <= MAX_TOKENS:
+                current.append(sent)
+                current_tokens = candidate_tokens
+            else:
+                flush_current()
+                current.append(sent)
+                current_tokens = sent_tokens
+
+    flush_current()
+    return chunks
+
+
+def _filter_chunks(chunks: List[str], tokenizer) -> List[str]:
+    """
+    Remove extremely short chunks that are unlikely to produce
+    meaningful classification.
+    """
+    filtered = []
+    for chunk in chunks:
+        words = len(chunk.split())
+        if words >= MIN_CHUNK_WORDS:
+            filtered.append(chunk)
+        elif words >= 10 and _token_count(tokenizer, chunk) >= 20:
+            # Keep short but token-meaningful chunks
+            filtered.append(chunk)
+    return filtered
+
+
+# =========================================================
+# INFERENCE
+# =========================================================
+
+def _run_inference(tokenizer, model, device, chunks: List[str]) -> List[Dict]:
+    """
+    Run model inference on chunks and return per-chunk results.
+    """
+    results: List[Dict] = []
+    total_chunks = len(chunks)
+
+    for i in range(0, total_chunks, BATCH_SIZE):
+        batch = chunks[i : i + BATCH_SIZE]
+
+        inputs = tokenizer(
+            batch,
+            return_tensors="pt",
+            truncation=True,
+            max_length=MAX_TOKENS,
+            padding=True,
+        )
+
+        if device == "cuda":
+            inputs = {k: v.cuda() for k, v in inputs.items()}
+
+        import torch
+
+        with torch.no_grad():
+            outputs = model(**inputs)
+            probs = torch.softmax(outputs.logits, dim=-1)
+
+        for j, chunk_text in enumerate(batch):
+            human_prob = probs[j][0].item()
+            ai_prob = probs[j][1].item()
+            results.append(
+                {
+                    "text": chunk_text,
+                    "ai_probability": round(ai_prob, 4),
+                    "human_probability": round(human_prob, 4),
+                    "is_ai": ai_prob > human_prob,
+                }
+            )
+
+    return results
+
+
+# =========================================================
+# SCORE AGGREGATION
+# =========================================================
+
+def _aggregate_score(chunks: List[str], results: List[Dict]) -> Tuple[int, int]:
+    """
+    Length-weighted average of chunk AI probabilities.
+    Longer chunks carry more weight.
+    """
+    if not results:
+        return 0, 100
+
+    total_weight = 0.0
+    weighted_sum = 0.0
+
+    for chunk, result in zip(chunks, results):
+        weight = len(chunk.split())
+        total_weight += weight
+        weighted_sum += result["ai_probability"] * weight
+
+    if total_weight == 0:
+        avg_prob = sum(r["ai_probability"] for r in results) / len(results)
+    else:
+        avg_prob = weighted_sum / total_weight
+
+    ai_score = int(round(avg_prob * 100))
+    ai_score = max(0, min(100, ai_score))
+    human_score = 100 - ai_score
+
+    return ai_score, human_score
+
+
+# =========================================================
+# PUBLIC API
+# =========================================================
+
+def detect_ai(text: str) -> Dict:
+    """
+    Detect AI-generated content using the Oxidane/tmr-ai-text-detector model.
+
+    Returns a dictionary with:
+        - ai_score: int (0-100)
+        - human_score: int (0-100)
+        - words: int
+        - status: str ("Human", "Mixed", "AI")
+        - highlight_texts: list of top AI-flagged chunks
+        - text_content: joined highlight_texts
+        - segments: list of per-chunk results
+    """
+    start_time = time.time()
+
+    # Load model (cached after first call)
+    tokenizer, model, device = _load_model()
+
+    # Clean text
+    clean_text = _clean_text(text)
+    words = len(clean_text.split())
+
+    if words < 10:
+        logger.info("Text too short for meaningful detection: %d words", words)
+        return {
+            "ai_score": 0,
+            "human_score": 100,
+            "words": words,
+            "status": "Human",
+            "highlight_texts": [],
+            "text_content": "",
+            "segments": [],
+        }
+
+    # Chunk
+    raw_chunks = _chunk_text(tokenizer, clean_text)
+    chunks = _filter_chunks(raw_chunks, tokenizer)
+
+    if not chunks:
+        logger.info("No valid chunks after filtering.")
+        return {
+            "ai_score": 0,
+            "human_score": 100,
+            "words": words,
+            "status": "Human",
+            "highlight_texts": [],
+            "text_content": "",
+            "segments": [],
+        }
+
+    logger.info(
+        "Detector chunks: %d (from %d raw chunks, %d words)",
+        len(chunks),
+        len(raw_chunks),
+        words,
+    )
+
+    # Inference
+    results = _run_inference(tokenizer, model, device, chunks)
+
+    # Aggregate
+    ai_score, human_score = _aggregate_score(chunks, results)
+
+    # Status
+    if ai_score < 30:
+        status = "Human"
+    elif ai_score < 70:
+        status = "Mixed"
+    else:
+        status = "AI"
+
+    # Highlights: top chunks by AI probability, limited to 6
+    sorted_results = sorted(
+        results, key=lambda r: r["ai_probability"], reverse=True
+    )
+    highlight_texts = [r["text"] for r in sorted_results if r["is_ai"]][:6]
+
+    # Segments: preserve all chunk results for downstream use
+    segments = [
+        {
+            "text": r["text"],
+            "ai_probability": r["ai_probability"],
+            "is_ai": r["is_ai"],
+        }
+        for r in results
+    ]
+
+    inference_time = time.time() - start_time
+    logger.info(
+        "Detector complete: model=%s, device=%s, chunks=%d, "
+        "avg_ai_prob=%.4f, ai_score=%d, human_score=%d, status=%s, time=%.2fs",
+        MODEL_ID,
+        device,
+        len(chunks),
+        ai_score / 100.0,
+        ai_score,
+        human_score,
+        status,
+        inference_time,
+    )
+
+    return {
+        "ai_score": ai_score,
+        "human_score": human_score,
+        "words": words,
+        "status": status,
+        "highlight_texts": highlight_texts,
+        "text_content": "\n".join(highlight_texts),
+        "segments": segments,
+    }

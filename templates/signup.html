@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Create Account | Turnalyze</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Left Side -->
+
+    <div class="left">
+
+        <h1>Turnalyze</h1>
+
+        <p>Professional AI Content Checker</p>
+
+        <ul>
+
+            <li>✔ Accurate AI Detection</li>
+
+            <li>✔ Human Score Analysis</li>
+
+            <li>✔ Professional PDF Reports</li>
+
+            <li>✔ Secure File Uploads</li>
+
+        </ul>
+
+    </div>
+
+    <!-- Right Side -->
+
+    <div class="right">
+
+        <div class="card">
+
+            <h2>Create Account</h2>
+
+            <!-- Flash Message -->
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+
+            <div class="alert">
+
+                {% for message in messages %}
+
+                <p>{{ message }}</p>
+
+                {% endfor %}
+
+            </div>
+
+            {% endif %}
+            {% endwith %}
+
+            <!-- Signup Form -->
+
+            <form action="/register" method="POST">
+
+                <input
+                    type="text"
+                    name="fullname"
+                    placeholder="Full Name"
+                    required
+                >
+
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Email Address"
+                    required
+                >
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                    required
+                >
+
+                <input
+                    type="password"
+                    name="confirm_password"
+                    placeholder="Confirm Password"
+                    required
+                >
+
+                <button type="submit">
+
+                    Create Account
+
+                </button>
+
+            </form>
+
+            <p>
+
+                Already have an account?
+
+                <a href="/">Login</a>
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

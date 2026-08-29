@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Turnalyze AI Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 210mm;
+            background: #ffffff;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #222222;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .report-page {
+            width: 210mm;
+            height: 297mm;
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+            background: #ffffff;
+        }
+
+        .cover-page {
+            page-break-after: always;
+        }
+
+        .overview-page {
+            page-break-after: avoid;
+        }
+
+        .clear {
+            clear: both;
+        }
+
+        /* Header - Fixed absolute position inside report-page */
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            right: 40px;
+            height: 52px;
+            border-bottom: 1px solid #ececec;
+            box-sizing: border-box;
+        }
+
+        .logo-area {
+            float: left;
+            width: 95px;
+        }
+
+        .logo {
+            width: 55px;
+            display: block;
+        }
+
+        .page-info {
+            float: left;
+            margin-left: 18px;
+            font-size: 11px;
+            color: #777777;
+            line-height: 40px;
+        }
+
+        .submission-id {
+            float: right;
+            font-size: 9px;
+            color: #666666;
+            line-height: 40px;
+        }
+
+        /* Content Areas */
+        .cover-content {
+            position: absolute;
+            top: 85px;
+            left: 40px;
+            right: 40px;
+            bottom: 60px;
+            box-sizing: border-box;
+            padding-top: 40px;
+        }
+
+        .page-content {
+            position: absolute;
+            top: 85px;
+            left: 40px;
+            right: 40px;
+            bottom: 60px;
+            box-sizing: border-box;
+            padding-top: 10px;
+        }
+
+        .file-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111111;
+            margin-bottom: 35px;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+
+        .meta {
+            margin: 8px 0 20px;
+        }
+
+        .meta-item {
+            margin-bottom: 10px;
+            color: #666666;
+            font-size: 11px;
+            line-height: 16px;
+        }
+
+        .small-icon {
+            width: 13px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #dddddd;
+            margin: 20px 0;
+        }
+
+        .details-wrapper-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .details-col {
+            vertical-align: top;
+            width: 480px;
+            padding: 0;
+        }
+
+        .stats-col {
+            vertical-align: top;
+            width: 173px;
+            text-align: right;
+            padding: 0;
+        }
+
+        .details h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #202020;
+            margin-bottom: 26px;
+        }
+
+        .detail-block {
+            margin-bottom: 16px;
+        }
+
+        .label {
+            display: block;
+            font-size: 10px;
+            color: #8d8d8d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 400;
+        }
+
+        .value {
+            display: block;
+            font-size: 15px;
+            color: #202020;
+            line-height: 1.8;
+            word-break: break-word;
+            font-weight: 700;
+        }
+
+        .stats {
+            width: 160px;
+            background: #fafafa;
+            border: 1px solid #ececec;
+            border-radius: 8px;
+            padding: 18px;
+            display: inline-block;
+            text-align: left;
+            box-sizing: border-box;
+        }
+
+        .stat-item {
+            margin-bottom: 18px;
+            font-size: 17px;
+            line-height: 1.4;
+        }
+
+        .stat-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-number {
+            font-size: 15px;
+            font-weight: 700;
+            color: #000000;
+        }
+
+        .stat-label {
+            font-size: 15px;
+            font-weight: 700;
+            color: #000000;
+            margin-left: 4px;
+        }
+
+        /* Footer - Fixed absolute position inside report-page */
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 40px;
+            right: 40px;
+            height: 30px;
+            border-top: 1px solid #ececec;
+            padding-top: 8px;
+            box-sizing: border-box;
+        }
+
+        .footer-logo {
+            width: 90px;
+            float: left;
+        }
+
+        .footer-page {
+            font-size: 11px;
+            color: #666666;
+            float: left;
+            margin-left: 20px;
+            line-height: 20px;
+        }
+
+        .footer-id {
+            font-size: 11px;
+            color: #666666;
+            float: right;
+            line-height: 20px;
+        }
+
+        /* AI Overview Layout */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-bottom: 24px;
+        }
+
+        .summary-left-col {
+            vertical-align: top;
+            width: 400px;
+            padding: 0;
+        }
+
+        .summary-right-col {
+            vertical-align: top;
+            width: 253px;
+            text-align: right;
+            padding: 0;
+        }
+
+        .summary-left h1 {
+            font-size: 34px;
+            font-weight: 700;
+            color: #202020;
+            margin-bottom: 12px;
+        }
+
+        .summary-left p {
+            font-size: 13px;
+            line-height: 1.7;
+            color: #555555;
+        }
+
+        .notice-box {
+            width: 250px;
+            background: #eaf5ff;
+            border-left: 5px solid #1f78d1;
+            border-radius: 6px;
+            padding: 18px;
+            display: inline-block;
+            text-align: left;
+            box-sizing: border-box;
+        }
+
+        .notice-box h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #174d88;
+            margin-bottom: 10px;
+        }
+
+        .notice-box p {
+            font-size: 12px;
+            line-height: 1.7;
+            color: #555555;
+        }
+
+        .section-stack {
+            margin-top: 10px;
+        }
+
+        .groups h3, .disclaimer h4, .faq h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #222222;
+            margin-bottom: 16px;
+        }
+
+        .group-item {
+            margin-bottom: 18px;
+        }
+
+        .group-icon {
+            width: 22px;
+            height: 22px;
+            float: left;
+            margin-right: 15px;
+            margin-top: 2px;
+        }
+
+        .group-text {
+            margin-left: 37px;
+        }
+
+        .group-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #202020;
+            margin-bottom: 6px;
+        }
+
+        .group-desc {
+            font-size: 12px;
+            line-height: 1.7;
+            color: #666666;
+        }
+
+        .disclaimer {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .disclaimer p {
+            font-size: 12px;
+            color: #555555;
+            line-height: 1.8;
+        }
+
+        .faq-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-top: 10px;
+        }
+
+        .faq-left-col {
+            vertical-align: top;
+            width: 513px;
+            padding: 0;
+        }
+
+        .faq-right-col {
+            vertical-align: top;
+            width: 140px;
+            text-align: center;
+            padding: 0;
+        }
+
+        .faq-left h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #222222;
+        }
+
+        .faq-left p {
+            font-size: 12px;
+            line-height: 1.8;
+            color: #555555;
+            margin-bottom: 16px;
+        }
+
+        .faq-right img {
+            width: 110px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <section class="report-page cover-page">
+        <header class="header">
+            <div class="logo-area">
+                <img src="{{ url_for('static', filename='images/turnitin-logo.png') }}" class="logo" alt="Turnalyze">
+            </div>
+            <div class="page-info">Page 1 of {{ page_count }} • Cover Page</div>
+            <div class="submission-id">Submission ID {{ submission_id }}</div>
+            <div class="clear"></div>
+        </header>
+
+        <section class="cover-content">
+            <h1 class="file-title">{{ filename }}</h1>
+
+            <div class="meta">
+                <div class="meta-item">
+                    <img src="{{ url_for('static', filename='images/icon1.png') }}" class="small-icon" alt="">
+                    <span>My Files</span>
+                </div>
+                <div class="meta-item">
+                    <img src="{{ url_for('static', filename='images/icon2.png') }}" class="small-icon" alt="">
+                    <span>Assignment Submission</span>
+                </div>
+                <div class="meta-item">
+                    <img src="{{ url_for('static', filename='images/icon3.png') }}" class="small-icon" alt="">
+                    <span>{{ university }}</span>
+                </div>
+            </div>
+
+            <hr>
+
+            <table class="details-wrapper-table">
+                <tr>
+                    <td class="details-col">
+                        <div class="details">
+                            <h3>Document Details</h3>
+                            <div class="detail-block">
+                                <span class="label">Submission ID</span>
+                                <span class="value">{{ submission_id }}</span>
+                            </div>
+                            <div class="detail-block">
+                                <span class="label">Submission Date</span>
+                                <span class="value">{{ submission_date }}</span>
+                            </div>
+                            <div class="detail-block">
+                                <span class="label">Download Date</span>
+                                <span class="value">{{ download_date }}</span>
+                            </div>
+                            <div class="detail-block">
+                                <span class="label">File Name</span>
+                                <span class="value">{{ filename }}</span>
+                            </div>
+                            <div class="detail-block">
+                                <span class="label">File Size</span>
+                                <span class="value">{{ file_size }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="stats-col">
+                        <div class="stats">
+                            <div class="stat-item">
+                                <span class="stat-number">{{ pages }}</span>
+                                <span class="stat-label">Pages</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">{{ "{:,}".format(words) if words is number else words }}</span>
+                                <span class="stat-label">Words</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">{{ "{:,}".format(characters) if characters is number else characters }}</span>
+                                <span class="stat-label">Characters</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </section>
+
+        <footer class="footer">
+            <img src="{{ url_for('static', filename='images/turnitin-logo.png') }}" class="footer-logo" alt="Turnalyze">
+            <span class="footer-page">Page 1 of {{ page_count }}</span>
+            <span class="footer-id">Submission ID: {{ submission_id }}</span>
+            <div class="clear"></div>
+        </footer>
+    </section>
+
+    <section class="report-page overview-page">
+        <header class="header">
+            <div class="logo-area">
+                <img src="{{ url_for('static', filename='images/turnitin-logo.png') }}" class="logo" alt="Turnalyze">
+            </div>
+            <div class="page-info">Page 2 of {{ page_count }} • AI Writing Overview</div>
+            <div class="submission-id">Submission ID {{ submission_id }}</div>
+            <div class="clear"></div>
+        </header>
+
+        <section class="page-content ai-overview">
+            <table class="summary-table">
+                <tr>
+                    <td class="summary-left-col">
+                        <div class="summary-left">
+                            <h1>{{ ai_score }}% detected as AI</h1>
+                            <p>The percentage shown represents the amount of text that is likely AI-generated together with AI-generated text that appears to have been AI-paraphrased.</p>
+                        </div>
+                    </td>
+                    <td class="summary-right-col">
+                        <div class="notice-box">
+                            <h4>Review Recommended</h4>
+                            <p>AI detection should support human judgement. Always review highlighted sections before making academic decisions.</p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="section-stack">
+                <section class="groups">
+                    <h3>Detection Groups</h3>
+                    <div class="group-item">
+                        <img src="{{ url_for('static', filename='images/icon5.png') }}" class="group-icon" alt="">
+                        <div class="group-text">
+                            <div class="group-title">AI Generated Only {{ ai_only }}%</div>
+                            <div class="group-desc">Text that appears to have been written directly by a Large Language Model.</div>
+                        </div>
+                        <div class="clear"></div>
+                    </div>
+
+                    <div class="group-item">
+                        <img src="{{ url_for('static', filename='images/icon6.png') }}" class="group-icon" alt="">
+                        <div class="group-text">
+                            <div class="group-title">AI Generated &amp; AI Paraphrased {{ ai_paraphrased }}%</div>
+                            <div class="group-desc">AI-generated text that appears to have been modified using an AI paraphrasing tool.</div>
+                        </div>
+                        <div class="clear"></div>
+                    </div>
+                </section>
+
+                <section class="disclaimer">
+                    <h4>Disclaimer</h4>
+                    <p>AI writing detection is intended to assist reviewers. Detection scores are probabilistic and may produce false positives or false negatives. The report should never be the only basis for academic decisions.</p>
+                </section>
+
+                <section class="faq">
+                    <table class="faq-table">
+                        <tr>
+                            <td class="faq-left-col">
+                                <div class="faq-left">
+                                    <h3>Frequently Asked Questions</h3>
+                                    <h4>What does the AI percentage mean?</h4>
+                                    <p>The percentage estimates the proportion of qualifying text likely generated by AI or AI-assisted rewriting.</p>
+                                    <h4>What is qualifying text?</h4>
+                                    <p>Long-form academic writing such as reports, dissertations, essays and articles. Lists, references and tables may not be included.</p>
+                                </div>
+                            </td>
+                            <td class="faq-right-col">
+                                <div class="faq-right">
+                                    <img src="{{ url_for('static', filename='images/icon4.png') }}" alt="Illustration">
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </section>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <img src="{{ url_for('static', filename='images/turnitin-logo.png') }}" class="footer-logo" alt="Turnalyze">
+            <span class="footer-page">Page 2 of {{ page_count }}</span>
+            <span class="footer-id">Submission ID: {{ submission_id }}</span>
+            <div class="clear"></div>
+        </footer>
+    </section>
+</body>
+</html>
+

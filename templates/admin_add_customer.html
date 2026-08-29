@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Customer</title>
+</head>
+<body>
+    <h2>Add Customer</h2>
+    <form method="post" action="/admin/customers/add">
+        <input name="fullname" placeholder="Name" required>
+        <input name="phone" placeholder="Phone">
+        <input name="email" placeholder="Email" required>
+        <input name="password" placeholder="Password" required>
+        <select name="plan">
+            <option value="Free">Free</option>
+            <option value="Pro">Pro</option>
+        </select>
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>

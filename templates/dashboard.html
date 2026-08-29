@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Turnalyze Dashboard</title>
+
+<link rel="stylesheet"
+href="{{ url_for('static',filename='css/dashboard.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+</head>
+<body>
+
+<div class="wrapper">
+
+    <!-- Sidebar -->
+
+    <aside class="sidebar">
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+
+            <div>
+
+                <h2>Turnalyze</h2>
+
+                <span>AI Content Checker</span>
+
+            </div>
+
+        </div>
+
+        <ul class="menu">
+
+            <li class="active">
+
+                <a href="{{ url_for('upload_page') }}">
+
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+
+                    Upload File
+
+                </a>
+
+            </li>
+
+            <li>
+
+                <a href="{{ url_for('reports') }}">
+
+                    <i class="fa-solid fa-file-lines"></i>
+
+                    My Reports
+
+                </a>
+
+            </li>
+
+            <li>
+
+                <a href="{{ url_for('history') }}">
+
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+
+                    History
+
+                </a>
+
+            </li>
+
+            <li>
+
+                <a href="{{ url_for('account_page') }}">
+
+                    <i class="fa-solid fa-user"></i>
+
+                    Account
+
+                </a>
+
+            </li>
+
+            <li>
+
+                <a href="{{ url_for('settings_page') }}">
+
+                    <i class="fa-solid fa-gear"></i>
+
+                    Settings
+
+                </a>
+
+            </li>
+
+        </ul>
+
+        <div class="sidebar-bottom">
+
+            <div class="detect-card">
+
+                <i class="fa-solid fa-chart-simple"></i>
+
+                <h4>AI Detection</h4>
+
+                <p>Fast. Secure. Accurate.</p>
+
+            </div>
+
+            <p class="copyright">
+
+                © 2026 Turnalyze
+
+            </p>
+
+        </div>
+
+    </aside>
+
+    <!-- Main Area -->
+
+    <main class="main-content">
+
+        <!-- Navbar -->
+
+        <header class="navbar">
+
+            <div>
+
+                <h1>Dashboard</h1>
+
+                <p>
+
+                    Review your uploaded reports and AI detection insights.
+
+                </p>
+
+            </div>
+
+            <div class="nav-right">
+
+                <button class="theme-btn">
+
+<i class="fa-solid fa-moon"></i>
+
+</button>
+
+                <div class="profile">
+
+                    <div class="avatar">
+
+                        M
+
+                    </div>
+
+                    <div>
+
+<h4>{{ fullname or 'User' }}</h4>
+
+                        <span>Premium User</span>
+
+                    </div>
+
+                    <i class="fa-solid fa-angle-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- Upload Section -->
+
+        <section class="upload-section">
+
+            <div class="upload-box">
+
+                <div class="upload-icon">
+
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+
+                </div>
+
+                <h2>
+
+                    Upload Your Document
+
+                </h2>
+
+                <p>
+
+                    Supported files: DOCX, PDF
+
+                </p>
+
+              <form action="/upload" method="POST" enctype="multipart/form-data" id="dashboardUploadForm">
+
+    <input
+        type="file"
+        id="fileInput"
+        name="file"
+        hidden
+        accept=".pdf,.doc,.docx">
+
+    <label for="fileInput" class="upload-btn">
+        Choose File
+    </label>
+
+    <div class="file-name">No file selected</div>
+
+    <button type="button" class="analyze-btn" id="analyzeBtn" data-reports-url="{{ url_for('reports') }}">
+        Analyze AI Content
+    </button>
+
+</form>
+<p class="drag-text">
+
+or drag & drop your document here
+
+</p>
+
+            </div>
+
+        </section>
+<!-- ==========================
+Statistics
+========================== -->
+
+<section class="stats">
+
+<div class="stat-card">
+
+<i class="fa-solid fa-file"></i>
+
+<h2>{{ total_reports }}</h2>
+
+<p>Total Reports</p>
+
+</div>
+
+<div class="stat-card">
+
+<i class="fa-solid fa-robot"></i>
+
+<h2>{{ avg_ai }}%</h2>
+
+<p>Average AI</p>
+
+</div>
+
+<div class="stat-card">
+
+<i class="fa-solid fa-user-check"></i>
+
+<h2>{{ avg_human }}%</h2>
+
+<p>Human Score</p>
+
+</div>
+
+<div class="stat-card">
+
+<i class="fa-solid fa-file-word"></i>
+
+<h2>{{ total_words }}</h2>
+
+<p>Total Words</p>
+
+</div>
+
+</section>
+
+
+
+<!-- ==========================
+Recent Reports
+========================== -->
+
+<section class="reports">
+
+<div class="table-header">
+
+<h2>Recent Reports</h2>
+
+<a href="{{ url_for('reports') }}" class="view-btn">
+
+View All
+
+</a>
+
+</div>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Filename</th>
+
+<th>Date</th>
+
+<th>AI %</th>
+
+<th>Status</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% if recent_reports %}
+
+{% for report in recent_reports %}
+
+<tr>
+
+<td>{{ report[1] }}</td>
+
+<td>{{ report[2] }}</td>
+
+<td>{{ report[3] }}%</td>
+
+<td>
+
+<span class="{% if report[5] == 'AI' %}ai{% elif report[5] == 'Mixed' %}mixed{% else %}human{% endif %}">
+
+{{ report[5] }}
+
+</span>
+
+</td>
+
+<td>
+
+<a href="{{ url_for('report_page', report_id=report[0]) }}" class="download">View</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+{% else %}
+
+<tr>
+
+<td colspan="5">No reports yet.</td>
+
+</tr>
+
+{% endif %}
+
+</tbody>
+
+
+View
+
+</button>
+
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+</section>
+        <!-- Statistics -->
+
+        <section class="cards">
+
+            <div class="card">
+
+                <i class="fa-solid fa-lock"></i>
+
+                <h3>Secure</h3>
+
+                <p>Encrypted file uploads.</p>
+
+            </div>
+
+            <div class="card">
+
+                <i class="fa-solid fa-bullseye"></i>
+
+                <h3>Accurate</h3>
+
+                <p>AI probability analysis.</p>
+
+            </div>
+
+            <div class="card">
+
+                <i class="fa-solid fa-bolt"></i>
+
+                <h3>Fast</h3>
+
+                <p>Results within seconds.</p>
+
+            </div>
+
+            <div class="card">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                <h3>Reports</h3>
+
+                <p>Detailed AI report.</p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<script src="{{ url_for('static',filename='js/dashboard.js') }}"></script>
+
+</body>
+
+</html>

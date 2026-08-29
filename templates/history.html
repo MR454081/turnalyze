@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnalyze History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body>
+    <div class="wrapper">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                    <h2>Turnalyze</h2>
+                    <span>AI Content Checker</span>
+                </div>
+            </div>
+            <ul class="menu">
+                <li><a href="{{ url_for('upload_page') }}"><i class="fa-solid fa-cloud-arrow-up"></i> Upload File</a></li>
+                <li><a href="{{ url_for('reports') }}"><i class="fa-solid fa-file-lines"></i> My Reports</a></li>
+                <li class="active"><a href="{{ url_for('history') }}"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
+                <li><a href="{{ url_for('account_page') }}"><i class="fa-solid fa-user"></i> Account</a></li>
+                <li><a href="{{ url_for('settings_page') }}"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            </ul>
+        </aside>
+        <main class="main-content">
+            <header class="navbar">
+                <div>
+                    <h1>History</h1>
+                    <p>Recent uploads from the database.</p>
+                </div>
+            </header>
+            <section class="reports">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Upload Date</th>
+                            <th>AI %</th>
+                            <th>Human %</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if reports %}
+                        {% for report in reports %}
+                        <tr>
+                            <td>{{ report.filename }}</td>
+                            <td>{{ report.upload_date }}</td>
+                            <td>{{ report.ai_score }}%</td>
+                            <td>{{ report.human_score }}%</td>
+                            <td>{{ report.status }}</td>
+                            <td><a href="{{ url_for('report_page', report_id=report.id) }}" class="view-btn">View</a></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr><td colspan="6">No history found.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

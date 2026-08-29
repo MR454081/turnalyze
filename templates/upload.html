@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnalyze Upload</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body>
+    <div class="wrapper">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                    <h2>Turnalyze</h2>
+                    <span>AI Content Checker</span>
+                </div>
+            </div>
+            <ul class="menu">
+                <li class="active"><a href="{{ url_for('upload_page') }}"><i class="fa-solid fa-cloud-arrow-up"></i> Upload File</a></li>
+                <li><a href="{{ url_for('reports') }}"><i class="fa-solid fa-file-lines"></i> My Reports</a></li>
+                <li><a href="{{ url_for('history') }}"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
+                <li><a href="{{ url_for('account_page') }}"><i class="fa-solid fa-user"></i> Account</a></li>
+                <li><a href="{{ url_for('settings_page') }}"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            </ul>
+        </aside>
+        <main class="main-content">
+            <header class="navbar">
+                <div>
+                    <h1>Upload File</h1>
+                    <p>Upload a PDF or DOCX to generate an AI report.</p>
+                </div>
+            </header>
+            <section class="upload-section">
+                <div class="upload-box">
+                    <form action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
+                        <input type="file" id="fileInput" name="file" hidden accept=".pdf,.doc,.docx">
+                        <label for="fileInput" class="upload-btn">Choose File</label>
+                        <div class="file-name">No file selected</div>
+                        <button type="submit" class="analyze-btn">Analyze AI Content</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

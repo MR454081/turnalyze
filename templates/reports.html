@@ -1,0 +1,48 @@
+<table>
+
+    <thead>
+
+        <tr>
+
+            <th>Filename</th>
+            <th>Date</th>
+            <th>Pages</th>
+            <th>Words</th>
+            <th>AI %</th>
+            <th>Human %</th>
+            <th>Status</th>
+            <th>Action</th>
+
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+        {% for report in reports %}
+
+        <tr>
+
+            <td>{{ report[1] }}</td>
+            <td>{{ report[2] }}</td>
+            <td>{{ report[3] }}</td>
+            <td>{{ report[4] }}</td>
+            <td>{{ report[5] }}%</td>
+            <td>{{ report[6] }}%</td>
+            <td>{{ report[7] }}</td>
+
+            <td>
+
+                <a href="/report/{{ report[0] }}" class="view-btn">
+                    View
+                </a>
+
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
