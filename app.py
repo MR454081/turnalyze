@@ -332,16 +332,41 @@ def upload_page():
 @app.route("/upload", methods=["POST"])
 def upload():
     if "user" not in session:
+        logger.error(
+            "Upload: redirect reason=AUTH_FAILURE. "
+            "request_method=%s, user_id=%s, session_keys=%s, "
+            "redirect_target=home",
+            request.method, session.get("user_id"), list(session.keys()),
+        )
         flash("Please login first.")
         return redirect(url_for("home"))
     if "file" not in request.files:
+        logger.error(
+            "Upload: redirect reason=NO_FILE_IN_REQUEST. "
+            "request_method=%s, user_id=%s, filename=N/A, "
+            "session_keys=%s, redirect_target=upload_page",
+            request.method, session.get("user_id"), list(session.keys()),
+        )
         flash("Please choose a file.")
         return redirect(url_for("upload_page"))
     file = request.files["file"]
     if file.filename == "":
+        logger.error(
+            "Upload: redirect reason=EMPTY_FILENAME. "
+            "request_method=%s, user_id=%s, session_keys=%s, "
+            "redirect_target=upload_page",
+            request.method, session.get("user_id"), list(session.keys()),
+        )
         flash("No file selected.")
         return redirect(url_for("upload_page"))
     if not allowed_file(file.filename):
+        logger.error(
+            "Upload: redirect reason=FILE_TYPE_NOT_ALLOWED. "
+            "request_method=%s, user_id=%s, filename=%s, extension=%s, "
+            "session_keys=%s, redirect_target=upload_page",
+            request.method, session.get("user_id"), file.filename,
+            os.path.splitext(file.filename)[1], list(session.keys()),
+        )
         flash("Only PDF and DOCX files are supported.")
         return redirect(url_for("upload_page"))
 
@@ -349,6 +374,13 @@ def upload():
     safe_name = secure_filename(filename) or f"upload_{uuid.uuid4().hex}"
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
     file.save(filepath)
+
+    logger.info(
+        "Upload: file saved. request_method=%s, user_id=%s, "
+        "filename=%s, filepath=%s, filepath_exists=%s, file_size=%d",
+        request.method, session.get("user_id"), filename,
+        filepath, os.path.isfile(filepath), os.path.getsize(filepath),
+    )
 
     html_content = ""
     pdf_path = ""
@@ -391,9 +423,16 @@ def upload():
             pdf_pages = get_pdf_page_count(pdf_path)
     except Exception as exc:
         logger.error(
-            "Upload: document processing failed. filename=%s, filepath=%s, "
-            "filepath_exists=%s, error=%s",
-            filename, filepath, os.path.exists(filepath), exc,
+            "Upload: redirect reason=DOCUMENT_PROCESSING_ERROR. "
+            "request_method=%s, user_id=%s, filename=%s, extension=%s, "
+            "filepath=%s, filepath_exists=%s, "
+            "exception_type=%s, exception_message=%s, "
+            "session_keys=%s, redirect_target=upload_page",
+            request.method, session.get("user_id"), filename,
+            os.path.splitext(filename)[1],
+            filepath, os.path.exists(filepath),
+            type(exc).__name__, str(exc),
+            list(session.keys()),
         )
         flash(f"Unable to read document : {exc}")
         return redirect(url_for("upload_page"))

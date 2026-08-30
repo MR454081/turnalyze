@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: turnalyze
+    runtime: python
+    build:
+      commands:
+        - pip install --upgrade pip
+        - pip install -r requirements.txt
+        - python -m playwright install --with-deps chromium
+    start:
+      cmd: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 300 app:app
+    env:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+    plan: standard
