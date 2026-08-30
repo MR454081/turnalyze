@@ -382,6 +382,7 @@ def create_report_pdf(
                 args=[
                     "--allow-file-access-from-files",
                     "--disable-web-security",
+                    "--no-sandbox",
                 ]
             )
 

@@ -12,6 +12,7 @@ from pdf_converter import convert_docx_to_pdf, highlight_pdf_text, get_pdf_page_
 from report_generator import create_report_pdf
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 AI_DISPLAY_MODE = "disabled"
 
@@ -29,7 +30,7 @@ def pdf_has_annotations(pdf_path: str) -> bool:
 
 
 app = Flask(__name__)
-app.secret_key = "turnalyze_secret_key_2026"
+app.secret_key = os.environ.get("SECRET_KEY", "turnalyze_dev_secret_key_fallback_2026")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "turnalyze.db")
@@ -358,16 +359,42 @@ def upload():
             with open(filepath, "rb") as docx_file:
                 result = mammoth.convert_to_html(docx_file)
             html_content = result.value
-            pdf_path = convert_docx_to_pdf(filepath)
+            logger.info(
+                "Upload: DOCX read and converted to HTML. "
+                "filename=%s, filepath=%s, text_len=%d",
+                filename, filepath, len(text),
+            )
+            pdf_path = convert_docx_to_pdf(filepath, html_content=html_content)
+            logger.info(
+                "Upload: DOCX->PDF conversion done. pdf_path=%s, exists=%s",
+                pdf_path, os.path.isfile(pdf_path),
+            )
             doc = fitz.open(pdf_path)
             pdf_pages = len(doc)
             doc.close()
             pdf_path = copy_pdf_to_static(pdf_path, filename)
+            logger.info(
+                "Upload: PDF copied to static. pdf_path=%s, exists=%s",
+                pdf_path, os.path.isfile(pdf_path),
+            )
         else:
             text = read_pdf(filepath)
+            logger.info(
+                "Upload: PDF read. filename=%s, filepath=%s, text_len=%d",
+                filename, filepath, len(text),
+            )
             pdf_path = copy_pdf_to_static(filepath, filename)
+            logger.info(
+                "Upload: PDF copied to static. pdf_path=%s, exists=%s",
+                pdf_path, os.path.isfile(pdf_path),
+            )
             pdf_pages = get_pdf_page_count(pdf_path)
     except Exception as exc:
+        logger.error(
+            "Upload: document processing failed. filename=%s, filepath=%s, "
+            "filepath_exists=%s, error=%s",
+            filename, filepath, os.path.exists(filepath), exc,
+        )
         flash(f"Unable to read document : {exc}")
         return redirect(url_for("upload_page"))
 
@@ -416,14 +443,34 @@ def upload():
     report_id = cursor.lastrowid
     conn.close()
 
+    logger.info(
+        "Upload: report created in DB. report_id=%d, submission_id=%s, "
+        "filename=%s, user_id=%s, pdf_path=%s, pdf_exists=%s, session_keys=%s",
+        report_id, submission_id, filename, session.get("user_id"),
+        pdf_path, os.path.isfile(pdf_path) if pdf_path else False,
+        list(session.keys()),
+    )
+    session["report_id"] = report_id
+    session["submission_id"] = submission_id
+
     report_payload = {"id": report_id, "filename": filename, "upload_date": upload_date, "submission_id": submission_id, "pages": pages, "words": words, "characters": characters, "file_size": file_size, "ai_score": ai_score, "human_score": human_score, "status": status, "html_content": html_content, "pdf_path": pdf_path, "report_path": "", "ai_only": ai_only, "ai_paraphrased": ai_paraphrased, "student_name": "Student", "document_title": filename, "category": "Assignment Submission"}
     report_output = build_report_pdf(report_payload, text_content=text_content, highlight_texts=highlight_texts)
+
+    logger.info(
+        "Upload: report PDF generated. report_id=%d, report_output=%s, exists=%s",
+        report_id, report_output, os.path.isfile(report_output),
+    )
 
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE reports SET report_path=? WHERE id=?", (report_output, report_id))
     conn.commit()
     conn.close()
+
+    logger.info(
+        "Upload: report_path saved to DB. report_id=%d, report_path=%s, db_lookup_check=True",
+        report_id, report_output,
+    )
 
     return render_template("report.html", report_id=report_id, filename=filename, document_title=filename, student_name=session.get("fullname", filename), category="Assignment Submission", submission_date=upload_date, upload_date=upload_date, download_date=upload_date, submission_id=submission_id, pages=pages, words=words, characters=characters, file_size=file_size, ai_score=ai_score, human_score=human_score, ai_only=ai_only, ai_paraphrased=ai_paraphrased, status=status, html_content=html_content, page_count=max(3, pages + 2), pdf_filename=os.path.basename(pdf_path), pdf_url=url_for("report_preview", report_id=report_id, _external=False), university="Turnalyze University", report_path=report_output)
 

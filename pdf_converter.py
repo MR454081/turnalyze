@@ -3,7 +3,14 @@
 import os
 import re
 import shutil
+import logging
+
 import fitz
+
+logger = logging.getLogger(__name__)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_PDF_DIR = os.path.join(BASE_DIR, "static", "pdfs")
 
 try:
     import pythoncom
@@ -23,27 +30,105 @@ AI_HIGHLIGHT_COLOR = (
 )
 
 
-def convert_docx_to_pdf(docx_path):
-    pdf_dir = os.path.join("static", "pdfs")
-    os.makedirs(pdf_dir, exist_ok=True)
+def convert_docx_to_pdf(docx_path, html_content=None):
+    """Convert a DOCX file to PDF.
+
+    On Windows this uses docx2pdf (COM/Word automation).
+    On Linux/Render (or when docx2pdf is unavailable) this falls back
+    to converting the DOCX to HTML via mammoth and then rendering
+    that HTML to PDF via Playwright/Chromium — both already
+    dependencies of this project.
+
+    Returns an **absolute** path to the generated PDF.
+    """
     filename = os.path.splitext(os.path.basename(docx_path))[0]
-    pdf_path = os.path.join(pdf_dir, filename + ".pdf")
+    os.makedirs(STATIC_PDF_DIR, exist_ok=True)
+    pdf_path = os.path.join(STATIC_PDF_DIR, filename + ".pdf")
 
-    if convert is None:
-        raise RuntimeError("docx2pdf is not available")
+    # ---- Try native docx2pdf (Windows with pywin32) ----
+    if convert is not None and pythoncom is not None:
+        try:
+            pythoncom.CoInitialize()
+            try:
+                convert(docx_path, pdf_path)
+            finally:
+                pythoncom.CoUninitialize()
+            if os.path.isfile(pdf_path):
+                logger.info("convert_docx_to_pdf: used docx2pdf for %s", docx_path)
+                return pdf_path
+            logger.warning("docx2pdf produced no file at %s; falling back.", pdf_path)
+        except Exception as exc:
+            logger.warning("docx2pdf conversion failed (%s); falling back.", exc)
 
-    if pythoncom is None:
-        raise RuntimeError(
-            "pythoncom is not available; docx-to-pdf conversion requires Windows with pywin32 installed"
-        )
+    # ---- Fallback: mammoth + Playwright (cross-platform) ----
+    return _convert_docx_html_to_pdf(docx_path, html_content, pdf_path)
 
-    pythoncom.CoInitialize()
+
+def _convert_docx_html_to_pdf(docx_path, html_content, output_path):
+    """Convert a DOCX to PDF by first converting it to HTML (mammoth)
+    then rendering the HTML to PDF (Playwright/Chromium)."""
+    from playwright.sync_api import sync_playwright
+
+    if html_content is None:
+        import mammoth
+        with open(docx_path, "rb") as docx_file:
+            result = mammoth.convert_to_html(docx_file)
+        html_content = result.value
+
+    full_html = (
+        "<!DOCTYPE html>\n<html>\n<head>\n"
+        '<meta charset="utf-8">\n'
+        "<style>\n"
+        "body { font-family: Arial, sans-serif; margin: 0; padding: 2em; }\n"
+        "p { margin: 0 0 1em 0; }\n"
+        "</style>\n"
+        "</head>\n<body>\n"
+        + html_content
+        + "\n</body>\n</html>"
+    )
+
+    temp_html = output_path + ".html"
+    with open(temp_html, "w", encoding="utf-8") as f:
+        f.write(full_html)
+
+    html_url = "file:///" + os.path.abspath(temp_html).replace("\\", "/")
+
     try:
-        convert(docx_path, pdf_path)
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    "--allow-file-access-from-files",
+                    "--disable-web-security",
+                    "--no-sandbox",
+                ],
+            )
+            page = browser.new_page(
+                viewport={"width": 1280, "height": 1800},
+                device_scale_factor=1,
+            )
+            page.goto(html_url, wait_until="networkidle")
+            page.wait_for_load_state("networkidle")
+            page.pdf(
+                path=output_path,
+                format="A4",
+                print_background=True,
+                prefer_css_page_size=True,
+                margin={"top": "0mm", "right": "0mm", "bottom": "0mm", "left": "0mm"},
+            )
+            browser.close()
     finally:
-        pythoncom.CoUninitialize()
+        if os.path.exists(temp_html):
+            try:
+                os.remove(temp_html)
+            except Exception:
+                pass
 
-    return pdf_path
+    if not os.path.isfile(output_path):
+        raise RuntimeError("Playwright-based DOCX-to-PDF conversion produced no file.")
+
+    logger.info("convert_docx_to_pdf: used Playwright fallback for %s", docx_path)
+    return output_path
 
 
 def get_pdf_page_count(pdf_path):
