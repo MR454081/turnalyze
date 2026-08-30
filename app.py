@@ -8,7 +8,7 @@ import mammoth
 import fitz
 from detector import read_docx, read_pdf, detect_ai
 from ai_detector import get_detector
-from pdf_converter import convert_docx_to_pdf, highlight_pdf_text, get_pdf_page_count
+from pdf_converter import convert_docx_to_pdf, convert_doc_to_docx, highlight_pdf_text, get_pdf_page_count
 from report_generator import create_report_pdf
 
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ def ensure_schema():
 initialize_database()
 ensure_schema()
 
-ALLOWED_EXTENSIONS = {"pdf", "docx"}
+ALLOWED_EXTENSIONS = {"pdf", "docx", "doc"}
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -367,26 +367,88 @@ def upload():
             request.method, session.get("user_id"), file.filename,
             os.path.splitext(file.filename)[1], list(session.keys()),
         )
-        flash("Only PDF and DOCX files are supported.")
+        flash("Only DOC, DOCX, or PDF files are supported.")
         return redirect(url_for("upload_page"))
 
     filename = os.path.basename(file.filename)
+    file_ext = filename.rsplit(".", 1)[-1].lower()
     safe_name = secure_filename(filename) or f"upload_{uuid.uuid4().hex}"
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
     file.save(filepath)
 
     logger.info(
         "Upload: file saved. request_method=%s, user_id=%s, "
-        "filename=%s, filepath=%s, filepath_exists=%s, file_size=%d",
+        "filename=%s, extension=%s, filepath=%s, filepath_exists=%s, file_size=%d",
         request.method, session.get("user_id"), filename,
-        filepath, os.path.isfile(filepath), os.path.getsize(filepath),
+        file_ext, filepath, os.path.isfile(filepath), os.path.getsize(filepath),
     )
 
     html_content = ""
     pdf_path = ""
     pdf_pages = 0
+    processing_filepath = filepath
+    temp_docx_path = None
     try:
-        if filename.lower().endswith(".docx"):
+        if file_ext == "doc":
+            logger.info(
+                "Upload: stage=CONVERTING_DOC_TO_DOCX. filename=%s, "
+                "original_filepath=%s, file_ext=%s",
+                filename, filepath, file_ext,
+            )
+            try:
+                processing_filepath = convert_doc_to_docx(filepath)
+                temp_docx_path = processing_filepath
+                logger.info(
+                    "Upload: stage=DOC_TO_DOCX_COMPLETE. "
+                    "original_filepath=%s, processing_filepath=%s, "
+                    "conversion_result=success",
+                    filepath, processing_filepath,
+                )
+            except Exception as exc:
+                logger.error(
+                    "Upload: stage=DOC_CONVERSION_FAILED. "
+                    "filename=%s, original_filepath=%s, "
+                    "exception_type=%s, exception_message=%s, "
+                    "redirect_target=upload_page",
+                    filename, filepath,
+                    type(exc).__name__, str(exc),
+                )
+                flash("Unable to process DOC file. LibreOffice conversion failed.")
+                return redirect(url_for("upload_page"))
+
+            logger.info(
+                "Upload: stage=PROCESSING_AS_DOCX. "
+                "filename=%s, processing_filepath=%s, processing_stage=read_docx",
+                filename, processing_filepath,
+            )
+            text = read_docx(processing_filepath)
+            with open(processing_filepath, "rb") as docx_file:
+                result = mammoth.convert_to_html(docx_file)
+            html_content = result.value
+            logger.info(
+                "Upload: DOCX (from .doc) read and converted to HTML. "
+                "filename=%s, processing_filepath=%s, text_len=%d",
+                filename, processing_filepath, len(text),
+            )
+            pdf_path = convert_docx_to_pdf(processing_filepath, html_content=html_content)
+            logger.info(
+                "Upload: DOCX->PDF conversion done. pdf_path=%s, exists=%s",
+                pdf_path, os.path.isfile(pdf_path),
+            )
+            doc = fitz.open(pdf_path)
+            pdf_pages = len(doc)
+            doc.close()
+            pdf_path = copy_pdf_to_static(pdf_path, filename)
+            logger.info(
+                "Upload: PDF copied to static. pdf_path=%s, exists=%s",
+                pdf_path, os.path.isfile(pdf_path),
+            )
+        elif file_ext == "docx":
+            logger.info(
+                "Upload: stage=PROCESSING_DOCX. filename=%s, "
+                "original_filepath=%s, file_ext=%s",
+                filename, filepath, file_ext,
+            )
             text = read_docx(filepath)
             with open(filepath, "rb") as docx_file:
                 result = mammoth.convert_to_html(docx_file)
@@ -410,6 +472,11 @@ def upload():
                 pdf_path, os.path.isfile(pdf_path),
             )
         else:
+            logger.info(
+                "Upload: stage=PROCESSING_PDF. filename=%s, "
+                "original_filepath=%s, file_ext=%s",
+                filename, filepath, file_ext,
+            )
             text = read_pdf(filepath)
             logger.info(
                 "Upload: PDF read. filename=%s, filepath=%s, text_len=%d",
@@ -426,16 +493,32 @@ def upload():
             "Upload: redirect reason=DOCUMENT_PROCESSING_ERROR. "
             "request_method=%s, user_id=%s, filename=%s, extension=%s, "
             "filepath=%s, filepath_exists=%s, "
+            "processing_filepath=%s, processing_filepath_exists=%s, "
             "exception_type=%s, exception_message=%s, "
             "session_keys=%s, redirect_target=upload_page",
             request.method, session.get("user_id"), filename,
-            os.path.splitext(filename)[1],
+            file_ext,
             filepath, os.path.exists(filepath),
+            processing_filepath, os.path.exists(processing_filepath) if processing_filepath else False,
             type(exc).__name__, str(exc),
             list(session.keys()),
         )
         flash(f"Unable to read document : {exc}")
         return redirect(url_for("upload_page"))
+    finally:
+        if temp_docx_path and os.path.exists(temp_docx_path):
+            try:
+                os.remove(temp_docx_path)
+                logger.info(
+                    "Upload: temp DOCX cleanup. temp_docx_path=%s",
+                    temp_docx_path,
+                )
+            except Exception as cleanup_exc:
+                logger.warning(
+                    "Upload: temp DOCX cleanup failed. "
+                    "temp_docx_path=%s, exception_type=%s, exception_message=%s",
+                    temp_docx_path, type(cleanup_exc).__name__, str(cleanup_exc),
+                )
 
     # Use DeBERTa detector if checkpoint exists, otherwise fall back to heuristic
     try:

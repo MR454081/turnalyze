@@ -4,6 +4,9 @@ import os
 import re
 import shutil
 import logging
+import subprocess
+import tempfile
+import uuid
 
 import fitz
 
@@ -28,6 +31,153 @@ AI_HIGHLIGHT_COLOR = (
     237 / 255,
     244 / 255,
 )
+
+
+def convert_doc_to_docx(doc_path, output_dir=None):
+    """Convert a legacy DOC file to DOCX using LibreOffice in headless mode.
+
+    Uses a unique temporary working directory per call to prevent filename
+    collisions during concurrent uploads.
+
+    Parameters
+    ----------
+    doc_path : str
+        Absolute path to the input .doc file.
+    output_dir : str, optional
+        Directory for the temporary conversion workspace.
+        Defaults to the system temp directory.
+
+    Returns
+    -------
+    str
+        Absolute path to the generated .docx file.
+
+    Raises
+    ------
+    RuntimeError
+        If LibreOffice (``soffice``) is not found or conversion fails.
+    """
+    logger.info(
+        "convert_doc_to_docx: start. doc_path=%s",
+        doc_path,
+    )
+
+    soffice_bin = shutil.which("soffice") or shutil.which("libreoffice")
+    if not soffice_bin:
+        logger.error(
+            "convert_doc_to_docx: LibreOffice not found. "
+            "doc_path=%s",
+            doc_path,
+        )
+        raise RuntimeError(
+            "LibreOffice (soffice) is not installed or not on PATH. "
+            "Unable to convert DOC to DOCX."
+        )
+
+    if output_dir is None:
+        output_dir = tempfile.gettempdir()
+
+    work_dir = os.path.join(
+        output_dir, "turnalyze_doc_convert", f"{uuid.uuid4().hex}"
+    )
+    os.makedirs(work_dir, exist_ok=True)
+
+    cmd = [
+        soffice_bin,
+        "--headless",
+        "--norestore",
+        "--nolockcheck",
+        "--convert-to",
+        "docx",
+        "--outdir",
+        work_dir,
+        doc_path,
+    ]
+
+    logger.info(
+        "convert_doc_to_docx: running command. cmd=%s",
+        " ".join(cmd),
+    )
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=work_dir,
+        )
+    except subprocess.TimeoutExpired:
+        logger.error(
+            "convert_doc_to_docx: conversion timed out. doc_path=%s",
+            doc_path,
+        )
+        raise RuntimeError(
+            "DOC to DOCX conversion timed out after 120 seconds."
+        )
+    except Exception as exc:
+        logger.error(
+            "convert_doc_to_docx: conversion error. doc_path=%s, "
+            "exception_type=%s, exception_message=%s",
+            doc_path, type(exc).__name__, str(exc),
+        )
+        raise RuntimeError(
+            f"DOC to DOCX conversion failed: {type(exc).__name__}: {exc}"
+        )
+
+    if result.returncode != 0:
+        logger.error(
+            "convert_doc_to_docx: LibreOffice returned non-zero exit code. "
+            "doc_path=%s, returncode=%d, stderr=%s",
+            doc_path, result.returncode, result.stderr[:500],
+        )
+        raise RuntimeError(
+            f"LibreOffice conversion failed with exit code {result.returncode}."
+        )
+
+    # Locate the generated .docx file(s).
+    docx_files = [
+        f for f in os.listdir(work_dir)
+        if f.lower().endswith(".docx")
+    ]
+
+    if not docx_files:
+        logger.error(
+            "convert_doc_to_docx: no .docx output found. doc_path=%s, "
+            "work_dir=%s, stdout=%s",
+            doc_path, work_dir, result.stdout[:500],
+        )
+        raise RuntimeError(
+            "DOC to DOCX conversion produced no output file."
+        )
+
+    if len(docx_files) > 1:
+        logger.warning(
+            "convert_doc_to_docx: multiple .docx files found. "
+            "doc_path=%s, work_dir=%s, files=%s. "
+            "Selecting the first.",
+            doc_path, work_dir, docx_files,
+        )
+
+    converted_docx_path = os.path.join(work_dir, docx_files[0])
+
+    if not os.path.isfile(converted_docx_path):
+        logger.error(
+            "convert_doc_to_docx: converted file does not exist. "
+            "doc_path=%s, converted_docx_path=%s",
+            doc_path, converted_docx_path,
+        )
+        raise RuntimeError(
+            "DOC to DOCX conversion completed but output file is missing."
+        )
+
+    logger.info(
+        "convert_doc_to_docx: success. doc_path=%s, "
+        "converted_docx_path=%s, work_dir=%s",
+        doc_path, converted_docx_path, work_dir,
+    )
+
+    return converted_docx_path
 
 
 def convert_docx_to_pdf(docx_path, html_content=None):
