@@ -5,7 +5,7 @@ services:
     build:
       commands:
         - pip install --upgrade pip
-        - pip install -r requirements.txt
+        - pip install --no-cache-dir -r requirements.txt
         - apt-get update && apt-get install -y --no-install-recommends libreoffice
         - python -m playwright install --with-deps chromium
     start:
@@ -15,4 +15,6 @@ services:
         value: "1"
       - key: PYTHONDONTWRITEBYTECODE
         value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12.4"
     plan: standard
