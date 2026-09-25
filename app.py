@@ -413,7 +413,7 @@ def upload():
                     filename, filepath,
                     type(exc).__name__, str(exc),
                 )
-                flash("Unable to process DOC file. LibreOffice conversion failed.")
+                flash(str(exc))
                 return redirect(url_for("upload_page"))
 
             logger.info(
@@ -521,15 +521,46 @@ def upload():
                 )
 
     # Use DeBERTa detector if checkpoint exists, otherwise fall back to heuristic
+    detection = None
     try:
         deberta_detector = get_detector()
         if deberta_detector.available:
-            detection = deberta_detector.analyze(text)
-            logger.info(
-                "Using DeBERTa detector. ai_score=%d, mode=%s",
-                detection.get("ai_score", 0),
-                detection.get("mode", "deberta_prototype"),
-            )
+            import threading
+            _box = {"result": None, "error": None, "done": False}
+
+            def _run_detector():
+                try:
+                    _box["result"] = deberta_detector.analyze(text)
+                except Exception as _exc:
+                    _box["error"] = _exc
+                finally:
+                    _box["done"] = True
+
+            _t = threading.Thread(target=_run_detector, daemon=True)
+            _t.start()
+            _t.join(timeout=20)
+            if _t.is_alive():
+                logger.warning(
+                    "DeBERTa detector timed out after 20s. "
+                    "Using heuristic fallback. (This usually means "
+                    "HuggingFace model download is blocked or slow.)"
+                )
+                detection = detect_ai(text)
+            elif _box["error"] is not None:
+                logger.warning(
+                    "DeBERTa detector failed (%s). Using heuristic fallback.",
+                    _box["error"],
+                )
+                detection = detect_ai(text)
+            elif _box["result"] is not None:
+                detection = _box["result"]
+                logger.info(
+                    "Using DeBERTa detector. ai_score=%d, mode=%s",
+                    detection.get("ai_score", 0),
+                    detection.get("mode", "deberta_prototype"),
+                )
+            else:
+                detection = detect_ai(text)
         else:
             logger.warning(
                 "DeBERTa checkpoint not available at %s. Using heuristic fallback.",

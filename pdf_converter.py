@@ -26,6 +26,148 @@ except Exception:
     convert = None
 
 
+def _find_soffice():
+    """Locate the LibreOffice (soffice) executable across platforms.
+
+    Search order:
+      1. ``shutil.which`` (``soffice`` / ``libreoffice`` on PATH)
+      2. Windows-specific common install directories (Program Files / x86)
+      3. Windows registry uninstall entries (LibreOffice MSI installs)
+      4. macOS standard locations
+      5. Linux standard locations
+
+    Returns the absolute path to the executable or ``None`` if not found.
+    """
+    found = shutil.which("soffice") or shutil.which("libreoffice")
+    if found:
+        return found
+
+    candidates = []
+    if os.name == "nt":
+        pf = os.environ.get("ProgramFiles", r"C:\Program Files")
+        pfx86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+        candidates += [
+            os.path.join(pf, "LibreOffice", "program", "soffice.exe"),
+            os.path.join(pfx86, "LibreOffice", "program", "soffice.exe"),
+            os.path.join(pf, "LibreOffice 7", "program", "soffice.exe"),
+            os.path.join(pfx86, "LibreOffice 7", "program", "soffice.exe"),
+            os.path.join(pf, "LibreOffice 24", "program", "soffice.exe"),
+            os.path.join(pfx86, "LibreOffice 24", "program", "soffice.exe"),
+            os.path.join(pf, "LibreOffice 25", "program", "soffice.exe"),
+            os.path.join(pfx86, "LibreOffice 25", "program", "soffice.exe"),
+        ]
+        # Registry probe for MSI-installed LibreOffice
+        try:
+            import winreg
+            uninstall_paths = [
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+            ]
+            for root in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
+                for base in uninstall_paths:
+                    try:
+                        key = winreg.OpenKey(root, base)
+                    except OSError:
+                        continue
+                    for i in range(0, 64):
+                        try:
+                            sub_name = winreg.EnumKey(key, i)
+                        except OSError:
+                            break
+                        try:
+                            sub = winreg.OpenKey(key, sub_name)
+                            try:
+                                dn, _ = winreg.QueryValueEx(sub, "DisplayName")
+                            except OSError:
+                                dn = ""
+                            if isinstance(dn, str) and "LibreOffice" in dn:
+                                for value_name in (
+                                    "InstallLocation",
+                                    "DisplayIcon",
+                                ):
+                                    try:
+                                        val, _ = winreg.QueryValueEx(
+                                            sub, value_name
+                                        )
+                                    except OSError:
+                                        continue
+                                    if isinstance(val, str) and val.strip():
+                                        exe = os.path.join(
+                                            val.strip(), "program", "soffice.exe"
+                                        )
+                                        if os.path.isfile(exe):
+                                            candidates.append(exe)
+                                        elif value_name == "DisplayIcon":
+                                            base_dir = os.path.dirname(val)
+                                            exe = os.path.join(
+                                                base_dir, "soffice.exe"
+                                            )
+                                            if os.path.isfile(exe):
+                                                candidates.append(exe)
+                            sub.Close()
+                        except OSError:
+                            continue
+                    key.Close()
+        except Exception:
+            pass
+    elif os.name == "posix":
+        candidates += [
+            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            "/usr/bin/soffice",
+            "/usr/bin/libreoffice",
+            "/usr/local/bin/soffice",
+            "/usr/local/bin/libreoffice",
+            "/opt/libreoffice/program/soffice",
+        ]
+
+    for c in candidates:
+        if c and os.path.isfile(c):
+            logger.info("Detected LibreOffice at %s", c)
+            return c
+
+    return None
+
+
+def _libreoffice_missing_message():
+    return (
+        "LibreOffice (soffice) is required to convert legacy .doc files to "
+        ".docx, but it was not found on this system.\n\n"
+        "Install it from https://www.libreoffice.org/download/download/ "
+        "(Windows MSI build) and then restart the application. "
+        "After install, soffice.exe is normally at:\n"
+        "  C:\\Program Files\\LibreOffice\\program\\soffice.exe\n\n"
+        "Once installed, re-upload the file."
+    )
+
+
+def _word_com_available():
+    """Return True only if MS Word is actually installed and reachable via COM."""
+    if pythoncom is None or convert is None:
+        return False
+    try:
+        import win32com.client  # noqa: F401  (imported only to verify pywin32 works)
+        pythoncom.CoInitialize()
+        try:
+            win32com.client.DispatchEx("Word.Application")
+            return True
+        except Exception as exc:
+            logger.warning(
+                "docx2pdf: MS Word COM not available (%s); skipping docx2pdf.",
+                exc,
+            )
+            return False
+        finally:
+            try:
+                pythoncom.CoUninitialize()
+            except Exception:
+                pass
+    except Exception as exc:
+        logger.warning(
+            "docx2pdf: win32com not available (%s); skipping docx2pdf.", exc,
+        )
+        return False
+
+
 AI_HIGHLIGHT_COLOR = (
     201 / 255,
     237 / 255,
@@ -62,17 +204,13 @@ def convert_doc_to_docx(doc_path, output_dir=None):
         doc_path,
     )
 
-    soffice_bin = shutil.which("soffice") or shutil.which("libreoffice")
+    soffice_bin = _find_soffice()
     if not soffice_bin:
+        msg = _libreoffice_missing_message()
         logger.error(
-            "convert_doc_to_docx: LibreOffice not found. "
-            "doc_path=%s",
-            doc_path,
+            "convert_doc_to_docx: LibreOffice not found. doc_path=%s", doc_path,
         )
-        raise RuntimeError(
-            "LibreOffice (soffice) is not installed or not on PATH. "
-            "Unable to convert DOC to DOCX."
-        )
+        raise RuntimeError(msg)
 
     if output_dir is None:
         output_dir = tempfile.gettempdir()
@@ -82,8 +220,12 @@ def convert_doc_to_docx(doc_path, output_dir=None):
     )
     os.makedirs(work_dir, exist_ok=True)
 
+    user_profile = os.path.join(
+        tempfile.gettempdir(), "turnalyze_lo_profile", uuid.uuid4().hex
+    )
     cmd = [
         soffice_bin,
+        "-env:UserInstallation=file:///" + user_profile.replace("\\", "/"),
         "--headless",
         "--norestore",
         "--nolockcheck",
@@ -183,11 +325,10 @@ def convert_doc_to_docx(doc_path, output_dir=None):
 def convert_docx_to_pdf(docx_path, html_content=None):
     """Convert a DOCX file to PDF.
 
-    On Windows this uses docx2pdf (COM/Word automation).
-    On Linux/Render (or when docx2pdf is unavailable) this falls back
-    to converting the DOCX to HTML via mammoth and then rendering
-    that HTML to PDF via Playwright/Chromium — both already
-    dependencies of this project.
+    Primary path: LibreOffice headless (``soffice --convert-to pdf``).
+    Falls back to docx2pdf (COM/Word) on Windows when LibreOffice is not
+    installed, then to Playwright (HTML rendered from mammoth) as a
+    final cross-platform fallback.
 
     Returns an **absolute** path to the generated PDF.
     """
@@ -195,22 +336,119 @@ def convert_docx_to_pdf(docx_path, html_content=None):
     os.makedirs(STATIC_PDF_DIR, exist_ok=True)
     pdf_path = os.path.join(STATIC_PDF_DIR, filename + ".pdf")
 
-    # ---- Try native docx2pdf (Windows with pywin32) ----
-    if convert is not None and pythoncom is not None:
+    # ---- Primary: LibreOffice headless ----
+    soffice_bin = _find_soffice()
+    if soffice_bin:
         try:
-            pythoncom.CoInitialize()
-            try:
-                convert(docx_path, pdf_path)
-            finally:
-                pythoncom.CoUninitialize()
-            if os.path.isfile(pdf_path):
-                logger.info("convert_docx_to_pdf: used docx2pdf for %s", docx_path)
-                return pdf_path
-            logger.warning("docx2pdf produced no file at %s; falling back.", pdf_path)
+            work_dir = os.path.join(
+                tempfile.gettempdir(), "turnalyze_pdf_convert", uuid.uuid4().hex
+            )
+            os.makedirs(work_dir, exist_ok=True)
+            user_profile = os.path.join(
+                tempfile.gettempdir(), "turnalyze_lo_profile", uuid.uuid4().hex
+            )
+            cmd = [
+                soffice_bin,
+                "-env:UserInstallation=file:///" + user_profile.replace("\\", "/"),
+                "--headless",
+                "--norestore",
+                "--nolockcheck",
+                "--convert-to",
+                "pdf",
+                "--outdir",
+                work_dir,
+                docx_path,
+            ]
+            logger.info(
+                "convert_docx_to_pdf: LibreOffice cmd=%s",
+                " ".join(cmd),
+            )
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=180,
+                cwd=work_dir,
+            )
+            if result.returncode == 0:
+                candidate = os.path.join(
+                    work_dir,
+                    os.path.splitext(os.path.basename(docx_path))[0] + ".pdf",
+                )
+                if os.path.isfile(candidate):
+                    shutil.copyfile(candidate, pdf_path)
+                    logger.info(
+                        "convert_docx_to_pdf: used LibreOffice for %s -> %s",
+                        docx_path, pdf_path,
+                    )
+                    return pdf_path
+                pdfs_in_dir = [
+                    f for f in os.listdir(work_dir) if f.lower().endswith(".pdf")
+                ]
+                if pdfs_in_dir:
+                    shutil.copyfile(
+                        os.path.join(work_dir, pdfs_in_dir[0]), pdf_path,
+                    )
+                    logger.info(
+                        "convert_docx_to_pdf: used LibreOffice (found by listing) "
+                        "for %s -> %s",
+                        docx_path, pdf_path,
+                    )
+                    return pdf_path
+            logger.warning(
+                "convert_docx_to_pdf: LibreOffice failed rc=%d stderr=%s",
+                result.returncode, (result.stderr or "")[:300],
+            )
+        except subprocess.TimeoutExpired:
+            logger.warning(
+                "convert_docx_to_pdf: LibreOffice timed out for %s; "
+                "falling back.",
+                docx_path,
+            )
         except Exception as exc:
-            logger.warning("docx2pdf conversion failed (%s); falling back.", exc)
+            logger.warning(
+                "convert_docx_to_pdf: LibreOffice error (%s); falling back.",
+                exc,
+            )
+    else:
+        logger.warning(
+            "convert_docx_to_pdf: LibreOffice not found; trying fallback."
+        )
 
-    # ---- Fallback: mammoth + Playwright (cross-platform) ----
+    # ---- Secondary: docx2pdf (Windows + MS Word) ----
+    if _word_com_available():
+        import threading
+        result_box = {"error": None, "ok": False}
+
+        def _run_docx2pdf():
+            try:
+                pythoncom.CoInitialize()
+                try:
+                    convert(docx_path, pdf_path)
+                finally:
+                    pythoncom.CoUninitialize()
+                result_box["ok"] = os.path.isfile(pdf_path)
+            except Exception as exc:
+                result_box["error"] = exc
+
+        worker = threading.Thread(target=_run_docx2pdf, daemon=True)
+        worker.start()
+        worker.join(timeout=45)
+        if worker.is_alive():
+            logger.warning(
+                "docx2pdf: timed out after 45s for %s; falling back to Playwright.",
+                docx_path,
+            )
+        elif result_box["error"] is not None:
+            logger.warning(
+                "docx2pdf conversion failed (%s); falling back to Playwright.",
+                result_box["error"],
+            )
+        elif result_box["ok"]:
+            logger.info("convert_docx_to_pdf: used docx2pdf for %s", docx_path)
+            return pdf_path
+
+    # ---- Final fallback: mammoth + Playwright ----
     return _convert_docx_html_to_pdf(docx_path, html_content, pdf_path)
 
 
@@ -244,29 +482,57 @@ def _convert_docx_html_to_pdf(docx_path, html_content, output_path):
     html_url = "file:///" + os.path.abspath(temp_html).replace("\\", "/")
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    "--allow-file-access-from-files",
-                    "--disable-web-security",
-                    "--no-sandbox",
-                ],
+        import threading
+        playwright_box = {"error": None, "done": False}
+
+        def _run_playwright():
+            try:
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(
+                        headless=True,
+                        args=[
+                            "--allow-file-access-from-files",
+                            "--disable-web-security",
+                            "--no-sandbox",
+                            "--disable-gpu",
+                        ],
+                    )
+                    try:
+                        page = browser.new_page(
+                            viewport={"width": 1280, "height": 1800},
+                            device_scale_factor=1,
+                        )
+                        page.goto(html_url, wait_until="load", timeout=20000)
+                        page.pdf(
+                            path=output_path,
+                            format="A4",
+                            print_background=True,
+                            prefer_css_page_size=True,
+                            margin={"top": "0mm", "right": "0mm", "bottom": "0mm", "left": "0mm"},
+                        )
+                    finally:
+                        try:
+                            browser.close()
+                        except Exception:
+                            pass
+                playwright_box["done"] = True
+            except Exception as exc:
+                playwright_box["error"] = exc
+
+        pw_thread = threading.Thread(target=_run_playwright, daemon=True)
+        pw_thread.start()
+        pw_thread.join(timeout=90)
+        if pw_thread.is_alive():
+            raise RuntimeError(
+                "Playwright DOCX-to-PDF conversion timed out after 90s."
             )
-            page = browser.new_page(
-                viewport={"width": 1280, "height": 1800},
-                device_scale_factor=1,
+        if playwright_box["error"] is not None:
+            raise RuntimeError(
+                f"Playwright DOCX-to-PDF conversion failed: "
+                f"{type(playwright_box['error']).__name__}: {playwright_box['error']}"
             )
-            page.goto(html_url, wait_until="networkidle")
-            page.wait_for_load_state("networkidle")
-            page.pdf(
-                path=output_path,
-                format="A4",
-                print_background=True,
-                prefer_css_page_size=True,
-                margin={"top": "0mm", "right": "0mm", "bottom": "0mm", "left": "0mm"},
-            )
-            browser.close()
+        if not playwright_box["done"]:
+            raise RuntimeError("Playwright DOCX-to-PDF did not complete.")
     finally:
         if os.path.exists(temp_html):
             try:

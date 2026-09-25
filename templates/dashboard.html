@@ -204,22 +204,24 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
 
                 </p>
 
-              <form action="/upload" method="POST" enctype="multipart/form-data" id="dashboardUploadForm">
+              <form id="dashboardUploadForm" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
 
     <input
         type="file"
         id="fileInput"
         name="file"
-        hidden
-        accept=".pdf,.doc,.docx">
+        accept=".pdf,.doc,.docx"
+        style="display:none;">
 
     <label for="fileInput" class="upload-btn">
         Choose File
     </label>
 
-    <div class="file-name">No file selected</div>
+    <div class="file-name" id="fileName">No file selected</div>
 
-    <button type="button" class="analyze-btn" id="analyzeBtn" data-reports-url="{{ url_for('reports') }}">
+    <div class="upload-error" id="uploadError" style="display:none;color:#e74c3c;margin:8px 0;font-size:14px;"></div>
+
+    <button type="submit" class="analyze-btn" id="analyzeBtn">
         Analyze AI Content
     </button>
 
