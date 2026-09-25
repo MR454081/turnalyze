@@ -6,9 +6,12 @@ import shutil
 import logging
 import subprocess
 import tempfile
+import traceback
 import uuid
 
 import fitz
+
+from browser_runtime import browser_summary
 
 logger = logging.getLogger(__name__)
 
@@ -338,6 +341,13 @@ def convert_docx_to_pdf(docx_path, html_content=None):
 
     # ---- Primary: LibreOffice headless ----
     soffice_bin = _find_soffice()
+    logger.info(
+        "convert_docx_to_pdf: stage=5_PDF_CONVERSION_START. docx_path=%s, "
+        "output_path=%s, soffice=%s, docx2pdf_available=%s, %s",
+        docx_path, pdf_path, soffice_bin or "<not installed>",
+        bool(pythoncom is not None and convert is not None),
+        browser_summary(),
+    )
     if soffice_bin:
         try:
             work_dir = os.path.join(
@@ -481,6 +491,12 @@ def _convert_docx_html_to_pdf(docx_path, html_content, output_path):
 
     html_url = "file:///" + os.path.abspath(temp_html).replace("\\", "/")
 
+    logger.info(
+        "convert_docx_to_pdf: stage=6_PLAYWRIGHT_LAUNCH_START. docx_path=%s, "
+        "html_url=%s, output_path=%s, %s",
+        docx_path, html_url, output_path, browser_summary(),
+    )
+
     try:
         import threading
         playwright_box = {"error": None, "done": False}
@@ -517,6 +533,12 @@ def _convert_docx_html_to_pdf(docx_path, html_content, output_path):
                             pass
                 playwright_box["done"] = True
             except Exception as exc:
+                logger.error(
+                    "convert_docx_to_pdf: stage=6_PLAYWRIGHT_LAUNCH_FAILED. "
+                    "docx_path=%s, exception_type=%s, exception_message=%s, "
+                    "traceback:\n%s",
+                    docx_path, type(exc).__name__, exc, traceback.format_exc(),
+                )
                 playwright_box["error"] = exc
 
         pw_thread = threading.Thread(target=_run_playwright, daemon=True)
@@ -530,6 +552,7 @@ def _convert_docx_html_to_pdf(docx_path, html_content, output_path):
             raise RuntimeError(
                 f"Playwright DOCX-to-PDF conversion failed: "
                 f"{type(playwright_box['error']).__name__}: {playwright_box['error']}"
+                f" | {browser_summary()}"
             )
         if not playwright_box["done"]:
             raise RuntimeError("Playwright DOCX-to-PDF did not complete.")

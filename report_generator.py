@@ -1,11 +1,17 @@
+import logging
 import os
 import re
+import traceback
+
 import fitz
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from playwright.sync_api import sync_playwright
 
+from browser_runtime import browser_summary
 from pdf_converter import apply_canonical_decoration
+
+logger = logging.getLogger(__name__)
 
 
 def create_report_pdf(
@@ -373,6 +379,12 @@ def create_report_pdf(
         # =========================================================
     # PLAYWRIGHT / CHROMIUM
     # =========================================================
+
+    logger.info(
+        "create_report_pdf: stage=7_PLAYWRIGHT_LAUNCH_START. output_pdf_path=%s, "
+        "temp_html=%s, %s",
+        output_pdf_path, temp_html, browser_summary(),
+    )
 
     try:
         with sync_playwright() as p:
@@ -879,6 +891,13 @@ def create_report_pdf(
 
         final_doc.close()
 
+    except Exception:
+        logger.error(
+            "create_report_pdf: stage=7_PLAYWRIGHT_REPORT_GENERATION_FAILED. "
+            "output_pdf_path=%s, temp_html=%s, %s, traceback:\n%s",
+            output_pdf_path, temp_html, browser_summary(), traceback.format_exc(),
+        )
+        raise
     finally:
         for file_path in [
             temp_html,

@@ -1,8 +1,34 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, make_response
-import os, sqlite3, random, shutil, uuid
+import os, sqlite3, random, shutil, sys, traceback, uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import logging
+
+logger = logging.getLogger(__name__)
+
+# Log to stdout so Render (and gunicorn) capture every stage of the
+# upload -> analysis -> report pipeline, including full tracebacks.
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+    stream=sys.stdout,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    force=True,
+)
+
+# The Playwright/Chromium runtime must be configured BEFORE any module that
+# launches Chromium is imported, so that the build-time and run-time browser
+# directories are guaranteed to be the same.
+from browser_runtime import (  # noqa: E402  (import order is intentional)
+    browser_environment_report,
+    browser_summary,
+    configure_browser_runtime,
+    launch_self_test,
+    required_system_packages,
+    runtime_diagnostics_text,
+    start_background_launch_self_test,
+)
+
+configure_browser_runtime()
 
 import mammoth
 import fitz
@@ -10,9 +36,6 @@ from detector import read_docx, read_pdf, detect_ai
 from ai_detector import get_detector
 from pdf_converter import convert_docx_to_pdf, convert_doc_to_docx, highlight_pdf_text, get_pdf_page_count
 from report_generator import create_report_pdf
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 AI_DISPLAY_MODE = "disabled"
 
@@ -331,6 +354,12 @@ def upload_page():
 
 @app.route("/upload", methods=["POST"])
 def upload():
+    logger.info(
+        "Upload: stage=1_UPLOAD_RECEIVED. request_method=%s, user_id=%s, "
+        "content_type=%s, content_length=%s, session_keys=%s",
+        request.method, session.get("user_id"), request.content_type,
+        request.content_length, list(session.keys()),
+    )
     if "user" not in session:
         logger.error(
             "Upload: redirect reason=AUTH_FAILURE. "
@@ -377,11 +406,12 @@ def upload():
     file.save(filepath)
 
     logger.info(
-        "Upload: file saved. request_method=%s, user_id=%s, "
+        "Upload: stage=2_FILE_SAVED. request_method=%s, user_id=%s, "
         "filename=%s, extension=%s, filepath=%s, filepath_exists=%s, file_size=%d",
         request.method, session.get("user_id"), filename,
         file_ext, filepath, os.path.isfile(filepath), os.path.getsize(filepath),
     )
+    logger.info("Upload: stage=3_BROWSER_ENVIRONMENT. %s", browser_summary())
 
     html_content = ""
     pdf_path = ""
@@ -413,15 +443,24 @@ def upload():
                     filename, filepath,
                     type(exc).__name__, str(exc),
                 )
+                logger.error(
+                    "Upload: stage=DOC_CONVERSION_TRACEBACK. traceback:\n%s",
+                    traceback.format_exc(),
+                )
                 flash(str(exc))
                 return redirect(url_for("upload_page"))
 
             logger.info(
-                "Upload: stage=PROCESSING_AS_DOCX. "
-                "filename=%s, processing_filepath=%s, processing_stage=read_docx",
+                "Upload: stage=4_TEXT_EXTRACTION_START. "
+                "filename=%s, processing_filepath=%s, extractor=read_docx",
                 filename, processing_filepath,
             )
             text = read_docx(processing_filepath)
+            logger.info(
+                "Upload: stage=4_TEXT_EXTRACTION_COMPLETE. filename=%s, "
+                "processing_filepath=%s, text_length=%d",
+                filename, processing_filepath, len(text),
+            )
             with open(processing_filepath, "rb") as docx_file:
                 result = mammoth.convert_to_html(docx_file)
             html_content = result.value
@@ -445,8 +484,8 @@ def upload():
             )
         elif file_ext == "docx":
             logger.info(
-                "Upload: stage=PROCESSING_DOCX. filename=%s, "
-                "original_filepath=%s, file_ext=%s",
+                "Upload: stage=4_TEXT_EXTRACTION_START. filename=%s, "
+                "original_filepath=%s, file_ext=%s, extractor=read_docx+mammoth",
                 filename, filepath, file_ext,
             )
             text = read_docx(filepath)
@@ -454,9 +493,9 @@ def upload():
                 result = mammoth.convert_to_html(docx_file)
             html_content = result.value
             logger.info(
-                "Upload: DOCX read and converted to HTML. "
-                "filename=%s, filepath=%s, text_len=%d",
-                filename, filepath, len(text),
+                "Upload: stage=4_TEXT_EXTRACTION_COMPLETE. "
+                "filename=%s, filepath=%s, text_len=%d, html_len=%d",
+                filename, filepath, len(text), len(html_content or ""),
             )
             pdf_path = convert_docx_to_pdf(filepath, html_content=html_content)
             logger.info(
@@ -473,13 +512,14 @@ def upload():
             )
         else:
             logger.info(
-                "Upload: stage=PROCESSING_PDF. filename=%s, "
-                "original_filepath=%s, file_ext=%s",
+                "Upload: stage=4_TEXT_EXTRACTION_START. filename=%s, "
+                "original_filepath=%s, file_ext=%s, extractor=read_pdf",
                 filename, filepath, file_ext,
             )
             text = read_pdf(filepath)
             logger.info(
-                "Upload: PDF read. filename=%s, filepath=%s, text_len=%d",
+                "Upload: stage=4_TEXT_EXTRACTION_COMPLETE. "
+                "filename=%s, filepath=%s, text_len=%d",
                 filename, filepath, len(text),
             )
             pdf_path = copy_pdf_to_static(filepath, filename)
@@ -503,6 +543,13 @@ def upload():
             type(exc).__name__, str(exc),
             list(session.keys()),
         )
+        logger.error(
+            "Upload: stage=DOCUMENT_PROCESSING_TRACEBACK. traceback:\n%s",
+            traceback.format_exc(),
+        )
+        logger.error(
+            "Upload: stage=BROWSER_ENVIRONMENT_AT_FAILURE. %s", browser_summary(),
+        )
         flash(f"Unable to read document : {exc}")
         return redirect(url_for("upload_page"))
     finally:
@@ -521,6 +568,11 @@ def upload():
                 )
 
     # Use DeBERTa detector if checkpoint exists, otherwise fall back to heuristic
+    logger.info(
+        "Upload: stage=6_AI_DETECTION_START. filename=%s, text_length=%d, "
+        "word_count=%d",
+        filename, len(text or ""), len((text or "").split()),
+    )
     detection = None
     try:
         deberta_detector = get_detector()
@@ -586,6 +638,19 @@ def upload():
     upload_date = datetime.now().strftime("%d %b %Y %I:%M %p GMT+5:30")
     submission_id = f"trn:oid:::{random.randint(1000,9999)}:{random.randint(100000000,999999999)}"
 
+    logger.info(
+        "Upload: stage=6_AI_DETECTION_COMPLETE. filename=%s, ai_score=%d, "
+        "human_score=%d, words=%d, status=%s, pages=%d, pdf_pages=%d",
+        filename, ai_score, human_score, words, status, pages, pdf_pages,
+    )
+
+    logger.info(
+        "Upload: stage=8_DB_REPORT_INSERT_START. filename=%s, user_id=%s, "
+        "pdf_path=%s, pdf_exists=%s",
+        filename, session.get("user_id"), pdf_path,
+        os.path.isfile(pdf_path) if pdf_path else False,
+    )
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -597,8 +662,9 @@ def upload():
     conn.close()
 
     logger.info(
-        "Upload: report created in DB. report_id=%d, submission_id=%s, "
-        "filename=%s, user_id=%s, pdf_path=%s, pdf_exists=%s, session_keys=%s",
+        "Upload: stage=8_DB_REPORT_INSERT_COMPLETE. report_id=%d, "
+        "submission_id=%s, filename=%s, user_id=%s, pdf_path=%s, "
+        "pdf_exists=%s, session_keys=%s",
         report_id, submission_id, filename, session.get("user_id"),
         pdf_path, os.path.isfile(pdf_path) if pdf_path else False,
         list(session.keys()),
@@ -607,10 +673,34 @@ def upload():
     session["submission_id"] = submission_id
 
     report_payload = {"id": report_id, "filename": filename, "upload_date": upload_date, "submission_id": submission_id, "pages": pages, "words": words, "characters": characters, "file_size": file_size, "ai_score": ai_score, "human_score": human_score, "status": status, "html_content": html_content, "pdf_path": pdf_path, "report_path": "", "ai_only": ai_only, "ai_paraphrased": ai_paraphrased, "student_name": "Student", "document_title": filename, "category": "Assignment Submission"}
-    report_output = build_report_pdf(report_payload, text_content=text_content, highlight_texts=highlight_texts)
+    logger.info(
+        "Upload: stage=7_REPORT_GENERATION_START. report_id=%d, "
+        "report_folder=%s, report_folder_exists=%s, source_pdf=%s, "
+        "html_length=%d, %s",
+        report_id, app.config["REPORT_FOLDER"],
+        os.path.isdir(app.config["REPORT_FOLDER"]), pdf_path,
+        len(html_content or ""), browser_summary(),
+    )
+    try:
+        report_output = build_report_pdf(report_payload, text_content=text_content, highlight_texts=highlight_texts)
+    except Exception:
+        logger.error(
+            "Upload: stage=7_REPORT_GENERATION_FAILED. report_id=%d, "
+            "filename=%s, source_pdf=%s, source_pdf_exists=%s, "
+            "report_folder=%s. %s",
+            report_id, filename, pdf_path,
+            os.path.isfile(pdf_path) if pdf_path else False,
+            app.config["REPORT_FOLDER"], browser_summary(),
+        )
+        logger.error(
+            "Upload: stage=7_REPORT_GENERATION_TRACEBACK. traceback:\n%s",
+            traceback.format_exc(),
+        )
+        raise
 
     logger.info(
-        "Upload: report PDF generated. report_id=%d, report_output=%s, exists=%s",
+        "Upload: stage=7_REPORT_GENERATION_COMPLETE. report_id=%d, "
+        "report_output=%s, exists=%s",
         report_id, report_output, os.path.isfile(report_output),
     )
 
@@ -621,8 +711,16 @@ def upload():
     conn.close()
 
     logger.info(
-        "Upload: report_path saved to DB. report_id=%d, report_path=%s, db_lookup_check=True",
-        report_id, report_output,
+        "Upload: stage=8_DB_REPORT_PATH_UPDATE. report_id=%d, report_path=%s, "
+        "exists=%s",
+        report_id, report_output, os.path.isfile(report_output),
+    )
+
+    logger.info(
+        "Upload: stage=9_REPORT_RENDERED. report_id=%d, filename=%s, "
+        "submission_id=%s, ai_score=%d, report_url=%s",
+        report_id, filename, submission_id, ai_score,
+        url_for("report_page", report_id=report_id),
     )
 
     return render_template("report.html", report_id=report_id, filename=filename, document_title=filename, student_name=session.get("fullname", filename), category="Assignment Submission", submission_date=upload_date, upload_date=upload_date, download_date=upload_date, submission_id=submission_id, pages=pages, words=words, characters=characters, file_size=file_size, ai_score=ai_score, human_score=human_score, ai_only=ai_only, ai_paraphrased=ai_paraphrased, status=status, html_content=html_content, page_count=max(3, pages + 2), pdf_filename=os.path.basename(pdf_path), pdf_url=url_for("report_preview", report_id=report_id, _external=False), university="Turnalyze University", report_path=report_output)
@@ -1035,7 +1133,18 @@ def page_not_found(error):
 
 @app.errorhandler(500)
 def internal_server_error(error):
-    print(error)
+    original = getattr(error, "original_exception", None)
+    logger.error(
+        "Unhandled exception (HTTP 500). path=%s, method=%s, user_id=%s, "
+        "session_keys=%s",
+        request.path, request.method, session.get("user_id"),
+        list(session.keys()),
+        exc_info=original if original is not None else error,
+    )
+    logger.error(
+        "Unhandled exception (HTTP 500) browser environment. %s",
+        browser_summary(),
+    )
     flash("Internal Server Error.")
     if "user" in session:
         return redirect(url_for("dashboard"))
@@ -1048,6 +1157,37 @@ def inject_user():
 @app.route("/health")
 def health():
     return {"application": "Turnalyze", "version": "2.0", "status": "Running"}
+
+
+@app.route("/health/browser")
+def health_browser():
+    """Diagnostic endpoint: is Playwright/Chromium usable in this runtime?
+
+    /health/browser          - resolved paths, existence, missing libs
+    /health/browser?launch=1 - also really launch Chromium (headless)
+    /health/browser?deps=1   - plus the apt packages Playwright asks for
+    """
+    want_launch = (request.args.get("launch") or "").strip().lower() in ("1", "true", "yes")
+    want_deps = (request.args.get("deps") or "").strip().lower() in ("1", "true", "yes")
+
+    payload = dict(browser_environment_report(refresh=True))
+    payload["status"] = "ok"
+
+    if want_launch:
+        ok, message = launch_self_test(timeout=90)
+        payload["launch_test_ok"] = ok
+        payload["launch_test_message"] = message
+        if not ok:
+            payload["status"] = "chromium_launch_failed"
+
+    if want_deps:
+        payload["playwright_install_deps_dry_run"] = required_system_packages()
+
+    logger.info(
+        "Health/browser check. launch=%s, deps=%s, payload=%s",
+        want_launch, want_deps, payload,
+    )
+    return payload
 
 
 @app.route("/api/ai-detector/status")
@@ -1075,6 +1215,27 @@ def ai_detector_status():
 create_folders = lambda: [os.makedirs(folder, exist_ok=True) for folder in (app.config["UPLOAD_FOLDER"], app.config["REPORT_FOLDER"], app.config["PDF_FOLDER"], app.config["PAGE_FOLDER"])]
 create_folders()
 initialize_database()
+
+# ---------------------------------------------------------------------------
+# STARTUP DIAGNOSTICS
+#
+# Logged once per boot so the deployment environment is fully visible in the
+# Render logs (browser path, Chromium binary, missing shared libraries, ...).
+# ---------------------------------------------------------------------------
+
+logger.info("Startup: application booting. BASE_DIR=%s", BASE_DIR)
+logger.info("Startup: %s", runtime_diagnostics_text(refresh=True))
+
+for _folder_name in ("UPLOAD_FOLDER", "REPORT_FOLDER", "PDF_FOLDER", "PAGE_FOLDER"):
+    _folder = app.config[_folder_name]
+    logger.info(
+        "Startup: %s=%s exists=%s writable=%s",
+        _folder_name, _folder, os.path.isdir(_folder), os.access(_folder, os.W_OK),
+    )
+
+# Real Chromium launch check in a background thread: proves from the logs
+# whether Playwright can actually launch a browser in this runtime.
+start_background_launch_self_test()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
