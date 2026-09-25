@@ -118,6 +118,10 @@ def configure_browsers_path():
 
     The environment variable is only set when the operator has not set it
     already, so an explicit Render environment variable always wins.
+
+    On Render native, we *force* the path to /opt/render/project/.cache/playwright
+    so build and runtime are guaranteed to agree, even if the env var was not
+    propagated to the Gunicorn process.
     """
     existing = (os.environ.get(BROWSERS_PATH_ENV) or "").strip()
     if existing:
@@ -126,6 +130,17 @@ def configure_browsers_path():
             BROWSERS_PATH_ENV, existing, os.path.isdir(existing),
         )
         return existing
+
+    # Render native: force the canonical path so build+runtime match.
+    if os.path.isdir(RENDER_PROJECT_ROOT):
+        canonical = RENDER_BROWSERS_PATH
+        os.environ[BROWSERS_PATH_ENV] = canonical
+        logger.info(
+            "Browser runtime: on Render, pinning %s to canonical path %s "
+            "(exists=%s).",
+            BROWSERS_PATH_ENV, canonical, os.path.isdir(canonical),
+        )
+        return canonical
 
     for candidate in candidate_browsers_paths():
         if _has_browser_binaries(candidate):

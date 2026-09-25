@@ -19,8 +19,13 @@ real Render error is visible in the Render logs.
 ## 1. Build command (Render Dashboard -> Settings -> Build & Deploy)
 
 ```bash
-pip install --upgrade pip && pip install -r requirements.txt && PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.cache/playwright python -m playwright install chromium
+pip install --upgrade pip && pip install -r requirements.txt && python -m playwright install chromium
 ```
+
+**No inline `PLAYWRIGHT_BROWSERS_PATH=` prefix needed.**  
+`browser_runtime.py` detects Render native (`/opt/render/project` exists) and
+forces `PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.cache/playwright` at
+runtime, so build and runtime are guaranteed to use the same directory.
 
 ## 2. Start command (unchanged)
 
@@ -32,7 +37,7 @@ gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 300 app:app
 
 | Key | Value | Why |
 | --- | --- | --- |
-| `PLAYWRIGHT_BROWSERS_PATH` | `/opt/render/project/.cache/playwright` | **Must match the build command.** This is the directory the build downloads Chromium into and the directory the runtime looks in. |
+| `PLAYWRIGHT_BROWSERS_PATH` | `/opt/render/project/.cache/playwright` | Kept for documentation; `browser_runtime.py` forces this value on Render native if the env var is missing. |
 | `PYTHON_VERSION` | `3.12.4` | Same as local. |
 | `PYTHONUNBUFFERED` | `1` | Logs appear immediately. |
 | `LOG_LEVEL` | `INFO` | `DEBUG` for even more detail. |
@@ -58,7 +63,7 @@ GET https://<service>.onrender.com/health/browser?launch=1&deps=1
 
 Returns, among others:
 
-* `playwright_browsers_path` and `playwright_browsers_path_exists`
+* `playwright_browsers_path` and `playwright_browsers_path_exists` — **must be the canonical path and `true`**
 * `browsers_path_entries` (e.g. `chromium-1194`, `chromium_headless_shell-1194`)
 * `chromium_browsers` - per browser: directory, executable, exists
 * `chromium_executable` / `chromium_executable_exists`

@@ -6,10 +6,10 @@ services:
       commands:
         - pip install --upgrade pip
         - pip install --no-cache-dir -r requirements.txt
-        # Chromium must be installed into a directory that still exists at
-        # runtime. PLAYWRIGHT_BROWSERS_PATH below points at the same directory,
-        # so build and runtime always agree on where the browser lives.
-        - PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.cache/playwright python -m playwright install chromium
+        # Chromium is installed into the canonical Render path.
+        # browser_runtime.py forces PLAYWRIGHT_BROWSERS_PATH to the same
+        # value at runtime, so build and runtime always agree.
+        - python -m playwright install chromium
         # DO NOT add "playwright install --with-deps" and DO NOT add apt-get here.
         # Render's native runtime builds are unprivileged, so both fail with
         # "su: Authentication failure" / "Permission denied".
@@ -22,8 +22,8 @@ services:
         value: "1"
       - key: PYTHON_VERSION
         value: "3.12.4"
-      # MUST match the value used by the build command above, otherwise the
-      # runtime looks for Chromium somewhere the build never installed it.
+      # Kept for documentation; browser_runtime.py will override to the
+      # canonical path on Render native if this is missing.
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /opt/render/project/.cache/playwright
       - key: LOG_LEVEL
